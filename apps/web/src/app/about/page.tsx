@@ -10,9 +10,9 @@ export const metadata: Metadata = {
 
 /** Fill in names when ready; roles render on their own until then. */
 const TEAM: { role: string; name?: string; focus: string }[] = [
-  { name: 'Krishna Kumar', role: 'Team lead · Full-stack', focus: 'Architecture, matching engine, employer dashboard, Telegram bot' },
-  { name: 'Mithun G', role: 'Voice AI', focus: 'Kaam Didi phone agent, ElevenLabs Scribe + TTS, Bedrock Nova extraction' },
-  { name: 'Samvrith Singh V', role: 'Cloud & data', focus: 'Lambda, API Gateway, DynamoDB, S3, Location Service, Amplify, CloudWatch' },
+  { name: 'Mithun G', role: 'Team lead · Voice AI', focus: 'Kaam Didi phone agent, ElevenLabs Scribe + TTS, Bedrock Nova extraction' },
+  { name: 'Krishna Kumar', role: 'Full-stack', focus: 'Architecture, matching engine, employer dashboard, Telegram bot' },
+  { name: 'Samvrith Singh', role: 'Cloud & data', focus: 'Lambda, API Gateway, DynamoDB, S3, Location Service, Amplify, CloudWatch' },
   { name: 'Sreesanth Narayanan', role: 'Product & design', focus: 'High-Vis Editorial design system, landing page, worker ID card' },
 ];
 

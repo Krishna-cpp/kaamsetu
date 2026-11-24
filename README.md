@@ -164,9 +164,9 @@ docs/              demo-script.md, pitch-notes.md, screenshots
 ## Team Meteora
 | | |
 |---|---|
-| **Krishna Kumar** | Team lead · Full-stack |
-| **Mithun G** | Voice AI |
-| **Samvrith Singh V** | Cloud & data |
+| **Mithun G** | Team lead · Voice AI |
+| **Krishna Kumar** | Full-stack |
+| **Samvrith Singh** | Cloud & data |
 | **Sreesanth Narayanan** | Product & design |
 
 MIT License
