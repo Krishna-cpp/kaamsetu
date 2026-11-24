@@ -9,7 +9,9 @@
   --color-hivis: #ff5b14;
   --color-hivis-deep: #d94400;
   --color-signal: #ffd23f;
-  --color-concrete: #8c8a84;
+  /* text-safe grey: 4.7:1 on paper (AA). The original #8C8A84 stays available as concrete-soft for decoration. */
+  --color-concrete: #6b6963;
+  --color-concrete-soft: #8c8a84;
   --color-concrete-dark: #5f5d58;
   --color-line: #d9d3c7;
   --color-line-dark: #2c2c28;
@@ -56,6 +58,8 @@
   --hivis: var(--color-hivis);
   --signal: var(--color-signal);
   --concrete: var(--color-concrete);
+  /* hi-vis as TEXT on paper needs ≥3:1 (large text): #E8500F = 3.3:1. Fills keep #FF5B14. */
+  --hivis-text: #e8500f;
   --line: var(--color-line);
   --gutter: clamp(16px, 3vw, 40px);
   color-scheme: light;
@@ -156,11 +160,11 @@
 .grain {
   pointer-events: none;
   position: fixed;
-  inset: -50%;
+  inset: 0;
   z-index: 100;
-  opacity: 0.07;
+  opacity: 0.05;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
+  /* no blend mode: multiply forced a full-page re-composite on every animation frame */
 }
 
 /* Lenis */
@@ -717,3 +721,33 @@ select.ks-field {
   }
 }
 /* ── /landing ── */
+
+/* ── a11y + perf (lead) ── */
+/* Hi-vis text on light surfaces uses the AA-safe shade; on dark surfaces the original hi-vis is brighter and fine. */
+.text-hivis {
+  color: var(--hivis-text);
+}
+.bg-ink .text-hivis,
+.bg-ink-2 .text-hivis,
+.text-paper .text-hivis,
+.dark-nav .text-hivis {
+  color: var(--color-hivis);
+}
+/* Hero headline: CSS masked line reveal, runs from first paint (no JS) so LCP isn't gated on hydration */
+.ks-mask {
+  overflow: hidden;
+  padding-bottom: 0.06em;
+  margin-bottom: -0.06em;
+}
+.ks-rise {
+  animation: ks-rise 1.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes ks-rise {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: none;
+  }
+}
+/* ── /a11y + perf ── */

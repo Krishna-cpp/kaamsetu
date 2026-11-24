@@ -4,7 +4,7 @@ import { ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 import { TalkToKaamSetu } from '@/components/voice-agent';
-import { gsap, SplitText, useGsapContext } from './gsap';
+import { gsap, useGsapContext } from './gsap';
 import { Magnetic } from './interactions';
 import { PuneMap, type MatchInfo } from './pune-map';
 
@@ -17,14 +17,7 @@ export function Hero() {
   useGsapContext(root, (reduced) => {
     if (reduced) return;
     const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
-    SplitText.create('[data-hero-line]', {
-      type: 'lines',
-      mask: 'lines',
-      autoSplit: true,
-      onSplit(self: SplitText) {
-        return gsap.from(self.lines, { yPercent: 110, duration: 1.3, stagger: 0.09, ease: 'expo.out', delay: 0.1 });
-      },
-    });
+    // The headline reveal is pure CSS (.ks-rise) so it starts on first paint, not after hydration (LCP).
     tl.from('[data-hero-fade]', { y: 18, opacity: 0, duration: 0.9, stagger: 0.07 }, 0.55);
     tl.from('[data-hero-map]', { opacity: 0, duration: 1.6, ease: 'power2.out' }, 0);
     tl.from('[data-hero-rule]', { scaleX: 0, transformOrigin: 'left center', duration: 1.2 }, 0.2);
@@ -75,11 +68,13 @@ export function Hero() {
           <span className="inline-block h-px w-10 bg-ink" /> Vol. 01 · A job network that listens
         </p>
         <h1 ref={title} id="hero-title" className="display text-[clamp(72px,20vw,200px)] md:text-[clamp(96px,13.4vw,200px)]">
-          <span data-hero-line className="block">
-            Kaam milega.
+          <span className="ks-mask block">
+            <span className="ks-rise block">Kaam milega.</span>
           </span>
-          <span data-hero-line className="serif-i block pr-[0.1em] text-hivis">
-            Paas mein.
+          <span className="ks-mask block">
+            <span className="ks-rise serif-i block pr-[0.1em] text-hivis" style={{ animationDelay: '90ms' }}>
+              Paas mein.
+            </span>
           </span>
         </h1>
 

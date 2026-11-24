@@ -540,7 +540,7 @@ export async function jobsForWorker(ctx: Ctx, worker: Worker, limit = 3) {
   );
   return jobs
     .map((job) => ({ job, scored: scoreWorker(worker, { ...job, radiusKm: Math.max(job.radiusKm, 15) }) }))
-    .filter((x) => x.scored.breakdown.skill > 0)
+    .filter((x) => x.scored.breakdown.skill >= 0.5) // only exact or strongly related trades
     .sort((a, b) => b.scored.score - a.scored.score)
     .slice(0, limit)
     .map(({ job, scored }) => ({ job, distanceKm: haversineKm(worker.location, job.location), score: scored.score }));

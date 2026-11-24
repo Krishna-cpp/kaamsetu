@@ -66,7 +66,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
         )}
       >
         <nav className="container-x flex h-14 items-center justify-between gap-4" aria-label="Primary">
-          <Link href="/" className="shrink-0" aria-label="KaamSetu home">
+          <Link href="/" className="shrink-0" title="KaamSetu home">
             <Wordmark inverted={dark} />
           </Link>
           <ul className="hidden items-center gap-7 md:flex">

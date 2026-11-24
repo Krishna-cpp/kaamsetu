@@ -10,17 +10,17 @@ export const metadata: Metadata = {
 
 /** Fill in names when ready; roles render on their own until then. */
 const TEAM: { role: string; name?: string; focus: string }[] = [
-  { role: 'Voice & conversation', focus: 'Telegram bot, Kaam Didi phone agent, ElevenLabs Scribe and TTS' },
-  { role: 'Matching & data', focus: 'Nova extraction, explainable ranking, DynamoDB model' },
-  { role: 'Cloud', focus: 'Lambda, API Gateway, S3, Location Service, Amplify, CloudWatch' },
-  { role: 'Product & design', focus: 'Field research at the naka, this site, the employer app' },
+  { name: 'Krishna Kumar', role: 'Team lead · Full-stack', focus: 'Architecture, matching engine, employer dashboard, Telegram bot' },
+  { name: 'Mithun G', role: 'Voice AI', focus: 'Kaam Didi phone agent, ElevenLabs Scribe + TTS, Bedrock Nova extraction' },
+  { name: 'Samvrith Singh V', role: 'Cloud & data', focus: 'Lambda, API Gateway, DynamoDB, S3, Location Service, Amplify, CloudWatch' },
+  { name: 'Sreesanth Narayanan', role: 'Product & design', focus: 'High-Vis Editorial design system, landing page, worker ID card' },
 ];
 
 const PRINCIPLES = [
-  { k: 'Consent first, by voice', v: 'The bot asks before saving anything, in the worker’s language, and records a spoken yes.' },
+  { k: 'Consent first, by voice', v: 'The bot explains what it saves, in the worker’s language and out loud, and saves nothing until they agree.' },
   { k: 'Phone numbers are never public', v: 'Contact is exchanged only after the worker and the employer both accept the same job.' },
   { k: 'Locality, not location', v: 'Public profiles show a neighbourhood such as Kothrud. Exact coordinates stay server-side for matching.' },
-  { k: '“Delete my data”', v: 'Say it to the bot in any language and the profile, voice notes and match history are removed.' },
+  { k: '“Delete my data”', v: 'Say it to the bot in any language and the profile, ratings and match history are removed.' },
   { k: 'Explainable, not opaque', v: 'Every match carries a plain-language reason; there is no hidden boost or paid ranking.' },
 ];
 

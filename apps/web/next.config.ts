@@ -13,6 +13,8 @@ const config: NextConfig = {
   serverExternalPackages: ['@aws-sdk/client-bedrock-runtime', '@aws-sdk/client-dynamodb', '@aws-sdk/lib-dynamodb', '@aws-sdk/client-s3', '@aws-sdk/client-geo-places'],
   experimental: { optimizePackageImports: ['lucide-react', 'framer-motion'] },
   poweredByHeader: false,
+  // lets a production build (e.g. for Lighthouse) live next to a running dev server
+  distDir: process.env.NEXT_DIST_DIR || '.next',
 };
 
 export default config;

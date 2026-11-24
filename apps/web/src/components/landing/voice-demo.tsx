@@ -255,12 +255,11 @@ export function VoiceDemo() {
               <button
                 type="button"
                 onClick={() => setMuted((m) => !m)}
-                aria-pressed={muted}
-                aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
+                aria-pressed={!muted}
                 className="ks-btn ks-btn-ghost"
               >
                 {muted ? <VolumeX className="size-4" aria-hidden /> : <Volume2 className="size-4" aria-hidden />}
-                {muted ? 'Sound off' : 'Sound on'}
+                Sound{muted ? ' off' : ''}
               </button>
               {phase === 'await' && <span className="label animate-pulse text-signal">Tap Accept on the phone →</span>}
             </div>

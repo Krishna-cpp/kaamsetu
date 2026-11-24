@@ -38,7 +38,7 @@ async function withRetry<T>(fn: () => Promise<T>, tries = 6): Promise<T> {
 }
 
 async function main() {
-  const me = await withRetry(() => tg.call<{ username: string }>('getMe', {}));
+  const me = await withRetry(() => tg.call<{ username: string }>('getMe', {}), Infinity);
   // Long-polling and webhooks are mutually exclusive; drop any webhook while developing locally.
   await withRetry(() => tg.call('deleteWebhook', { drop_pending_updates: false }));
   await withRetry(() => tg.call('setMyCommands', {

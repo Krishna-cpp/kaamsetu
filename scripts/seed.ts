@@ -267,8 +267,8 @@ function main() {
     let accepted = 0;
     const matches: Match[] = ranked.map((r, k) => {
       const alerted = k < Math.max(5, s.n * 3);
-      // older jobs: resolved; the newest job stays "live" for the demo
-      const resolve = s.ago > 20 && alerted;
+      // older jobs: resolved
+      const resolve = s.ago > 300 && alerted; // jobs from the last ~5h stay open (bot + agent have work to offer)
       let status: Match['status'] = alerted ? 'alerted' : 'suggested';
       if (resolve) {
         const accepts = accepted < s.n && (k === 0 || rnd() < 0.55);

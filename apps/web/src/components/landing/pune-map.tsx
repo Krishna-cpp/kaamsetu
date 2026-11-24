@@ -416,8 +416,10 @@ export function PuneMap({
       last = now;
       frame(now);
     }
+    // Perf: keep the first frame static and start the loop only after the page has loaded and settled.
+    let ready = false;
     function play() {
-      if (running || reduced) return;
+      if (running || reduced || !ready) return;
       running = true;
       raf = requestAnimationFrame(loop);
     }
@@ -452,6 +454,16 @@ export function PuneMap({
     io.observe(canvas);
     const onVis = () => (document.hidden || !visible ? pause() : play());
     document.addEventListener('visibilitychange', onVis);
+    let startTimer = 0;
+    const begin = () => {
+      startTimer = window.setTimeout(() => {
+        ready = true;
+        if (visible && !document.hidden) play();
+      }, 1200);
+    };
+    if (document.readyState === 'complete') begin();
+    else window.addEventListener('load', begin, { once: true });
+    frame(performance.now());
     let rt = 0;
     const ro = new ResizeObserver(() => {
       window.clearTimeout(rt);
@@ -465,6 +477,8 @@ export function PuneMap({
     return () => {
       alive = false;
       window.clearTimeout(settle);
+      window.clearTimeout(startTimer);
+      window.removeEventListener('load', begin);
       pause();
       io.disconnect();
       ro.disconnect();

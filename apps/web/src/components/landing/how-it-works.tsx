@@ -151,7 +151,7 @@ export function HowItWorks() {
                     <span className="display text-[clamp(96px,12vw,200px)] leading-[0.8] text-ink/[0.07] transition-colors duration-500 group-data-[active=true]/panel:text-ink" aria-hidden>
                       {s.n}
                     </span>
-                    <span lang="hi" className="pt-2 text-[22px] font-semibold text-hivis md:text-[26px]">
+                    <span lang="hi" className="pt-2 text-[22px] font-semibold text-ink md:text-[26px]">
                       {s.deva}
                     </span>
                   </div>
