@@ -1,0 +1,17 @@
+{
+  "name": "@kaamsetu/bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/poll.ts",
+    "start": "tsx src/poll.ts"
+  },
+  "dependencies": {
+    "@kaamsetu/core": "*",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145"
+  }
+}

@@ -1,0 +1,31 @@
+# deps
+node_modules/
+.pnp*
+
+# env / secrets — never commit
+.env
+.env.*
+!.env.example
+
+# build
+.next/
+out/
+dist/
+build/
+cdk.out/
+*.tsbuildinfo
+next-env.d.ts
+
+# local data store (re-create with `npm run seed`)
+data/*.json
+!data/.gitkeep
+data/audio-cache/
+
+# test / tooling
+coverage/
+playwright-report/
+test-results/
+.vercel
+.DS_Store
+Thumbs.db
+*.log
