@@ -14,3 +14,4 @@ export * from './store/dynamo-repo';
 export * from './services/workflows';
 export * from './services/agent-tools';
 export * from './bot/handler';
+export * from './adapters/web-channel';

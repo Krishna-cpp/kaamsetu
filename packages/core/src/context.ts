@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { createChannel, type ChatChannel } from './adapters/channel';
+import { RoutingChannel, WebChannel } from './adapters/web-channel';
 import { createGeo, type GeoAdapter } from './adapters/geocode';
 import { createLlm, type LlmAdapter } from './adapters/llm';
 import { createStorage, type StorageAdapter } from './adapters/storage';
@@ -38,14 +39,16 @@ export function getCtx(): Ctx {
   if (g.__kaamsetuCtx) return g.__kaamsetuCtx;
   const env = getEnv();
   const storage = createStorage(env);
+  const repo = createRepo(env);
   const ctx: Ctx = {
     env,
-    repo: createRepo(env),
+    repo,
     llm: createLlm(env),
     stt: (kind = 'job') => createStt(env, kind),
     tts: createTts(env, storage),
     geo: createGeo(env),
-    channel: createChannel(env),
+    // Telegram (or mock) for normal chats; web_… chat ids go to the /chat web channel
+    channel: new RoutingChannel(createChannel(env), new WebChannel(repo, storage)),
     storage,
   };
   g.__kaamsetuCtx = ctx;

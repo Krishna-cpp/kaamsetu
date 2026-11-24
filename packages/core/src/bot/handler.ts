@@ -30,7 +30,8 @@ export interface TgUser {
 }
 export interface TgMessage {
   message_id: number;
-  chat: { id: number };
+  /** number for Telegram; "web_…" string for the /chat web channel */
+  chat: { id: number | string };
   from?: TgUser;
   text?: string;
   voice?: { file_id: string; mime_type?: string; duration: number };
@@ -151,10 +152,13 @@ async function onMessage(ctx: Ctx, chatId: string, s: Session, msg: TgMessage) {
       transcript = (await ctx.stt('worker').transcribe(new Uint8Array(), { mimeType: 'audio/ogg', languageHint: s.lang })).text;
     } else {
       const file = await ctx.channel.downloadFile(media.file_id);
-      audioUrl = await ctx.storage.put(`voice/${chatId}/${Date.now()}.ogg`, file.data, media.mime_type ?? 'audio/ogg').catch(() => null);
+      // web-chat voice notes are already stored (file id = storage key); Telegram ones are archived here
+      audioUrl = file.path.startsWith('voice/webchat/')
+        ? null
+        : await ctx.storage.put(`voice/${chatId}/${Date.now()}.ogg`, file.data, media.mime_type ?? 'audio/ogg').catch(() => null);
       const tr = await ctx.stt('worker').transcribe(file.data, {
         mimeType: media.mime_type ?? 'audio/ogg',
-        filename: 'voice.ogg',
+        filename: (media.mime_type ?? '').includes('webm') ? 'voice.webm' : 'voice.ogg',
         languageHint: s.lang ?? null,
       });
       transcript = tr.text;

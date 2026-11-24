@@ -13,7 +13,7 @@ export type ButtonGrid = ChatButton[][];
  * (interactive reply buttons ≈ inline keyboard; audio message ≈ voice).
  */
 export interface ChatChannel {
-  readonly name: 'telegram' | 'whatsapp' | 'mock';
+  readonly name: 'telegram' | 'whatsapp' | 'web' | 'mock';
   sendText(chatId: string, text: string, buttons?: ButtonGrid): Promise<void>;
   sendVoice(chatId: string, audio: Uint8Array, opts?: { caption?: string; buttons?: ButtonGrid; mimeType?: string }): Promise<void>;
   sendChatAction?(chatId: string, action: 'typing' | 'record_voice' | 'upload_voice'): Promise<void>;
