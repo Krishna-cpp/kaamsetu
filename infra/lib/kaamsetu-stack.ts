@@ -127,6 +127,9 @@ export class KaamSetuStack extends cdk.Stack {
     });
     api.addRoutes({ path: '/telegram', methods: [apigw.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('Tg', telegramFn) });
     api.addRoutes({ path: '/agent/{tool}', methods: [apigw.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('Agent', agentFn) });
+    // One-off: register the Telegram webhook from AWS (secret-protected)
+    const setupFn = new nodejs.NodejsFunction(this, 'TelegramSetup', { ...common, handler: 'telegramSetup', description: 'KaamSetu: register Telegram webhook', timeout: cdk.Duration.seconds(40) });
+    api.addRoutes({ path: '/telegram/setup', methods: [apigw.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('TgSetup', setupFn) });
 
     /* ── Amplify Hosting (Next.js SSR, monorepo app root apps/web) ── */
     let amplifyUrl: string | undefined;

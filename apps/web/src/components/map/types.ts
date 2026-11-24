@@ -48,6 +48,8 @@ export interface MapViewProps {
   onSelect?: (id: string) => void;
   /** Change this to re-fit the camera to the current content. */
   fitKey?: string;
+  /** camera padding when fitting (e.g. leave room for a bottom sheet) */
+  fitPadding?: number | { top: number; right: number; bottom: number; left: number };
   className?: string;
   ariaLabel?: string;
 }

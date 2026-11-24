@@ -33,6 +33,55 @@ export async function telegram(event: APIGatewayProxyEventV2): Promise<APIGatewa
   return json(200, { ok: true });
 }
 
+/**
+ * POST /telegram/setup (header x-kaamsetu-secret: AGENT_TOOL_SECRET)
+ * Registers this API as the bot's webhook and sets the command menu, calling Telegram from AWS.
+ * (Telegram can throttle a developer's local IP; the Lambda's egress IP is unaffected.)
+ */
+export async function telegramSetup(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
+  const ctx = getCtx();
+  if (!ctx.env.AGENT_TOOL_SECRET || header(event, 'x-kaamsetu-secret') !== ctx.env.AGENT_TOOL_SECRET) return json(401, { error: 'unauthorized' });
+  const token = ctx.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return json(400, { error: 'TELEGRAM_BOT_TOKEN not configured' });
+  const url = `https://${event.requestContext.domainName}/telegram`;
+  const tg = async (method: string, body: unknown): Promise<unknown> => {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(6000),
+      });
+      return { ms: Date.now() - t0, status: r.status, body: (await r.json()) as unknown };
+    } catch (e) {
+      const err = e as Error & { cause?: { code?: string } };
+      return { ms: Date.now() - t0, error: `${err.name}: ${err.message} ${err.cause?.code ?? ''}`.trim() };
+    }
+  };
+  const probe = await fetch('https://api.telegram.org/', { signal: AbortSignal.timeout(5000) })
+    .then((r) => `reachable ${r.status}`)
+    .catch((e: Error) => `unreachable: ${e.message}`);
+  const me = await tg('getMe', {});
+  const webhook = await tg('setWebhook', {
+    url,
+    secret_token: ctx.env.TELEGRAM_WEBHOOK_SECRET,
+    allowed_updates: ['message', 'callback_query'],
+    drop_pending_updates: true,
+  });
+  const commands = await tg('setMyCommands', {
+    commands: [
+      { command: 'start', description: 'Start / शुरू करें / सुरू करा' },
+      { command: 'jobs', description: 'Work near me / पास में काम' },
+      { command: 'profile', description: 'My KaamSetu ID' },
+      { command: 'lang', description: 'Change language / भाषा' },
+      { command: 'delete', description: 'Delete my data / मेरा डेटा हटाओ' },
+    ],
+  });
+  const info = await tg('getWebhookInfo', {});
+  return json(200, { url, probe, me, webhook, commands, info });
+}
+
 const TOOLS: ToolName[] = ['register_worker', 'find_jobs_near_me', 'accept_job'];
 
 export async function agentTool(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {

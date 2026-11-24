@@ -227,7 +227,7 @@ export default function MapView(props: MapViewProps) {
     const b = focus.length ? boundsOf(focus, ring) : boundsOf([...(dots ?? []), ...(jobs ?? [])]);
     if (!b) return;
     const w = map.getContainer().clientWidth;
-    const pad = w < 500 ? 28 : 64;
+    const pad = props.fitPadding ?? (w < 500 ? 28 : 64);
     map.fitBounds(
       [
         [b.minLng, b.minLat],

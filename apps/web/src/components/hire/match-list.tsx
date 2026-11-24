@@ -26,16 +26,18 @@ interface Props {
   onRespond: (matchId: string, action: 'accepted' | 'declined') => Promise<void>;
   onRated: (w: PublicWorker) => void;
   workerCount: number;
+  /** rendered inside the mobile bottom sheet: sticky to the sheet, tighter header */
+  inSheet?: boolean;
 }
 
 export function MatchList(p: Props) {
   if (p.error && !p.view) return <ErrorState message={p.error} onRetry={p.onRetry} />;
   if (p.posting || (!p.view && p.loading)) return <Skeletons />;
-  if (!p.view) return <EmptyState workerCount={p.workerCount} />;
+  if (!p.view) return <EmptyState workerCount={p.workerCount} inSheet={p.inSheet} />;
   return <Loaded {...p} view={p.view} />;
 }
 
-function Loaded({ view, activeId, selectedId, celebrate, workerOverrides, onHover, onSelect, onRespond, onRated, error, onRetry }: Props & { view: JobView }) {
+function Loaded({ inSheet = false, view, activeId, selectedId, celebrate, workerOverrides, onHover, onSelect, onRespond, onRated, error, onRetry }: Props & { view: JobView }) {
   const reduce = useReducedMotion();
   const [showMore, setShowMore] = useState(false);
   const { job, matches, counts } = view;
@@ -48,7 +50,7 @@ function Loaded({ view, activeId, selectedId, celebrate, workerOverrides, onHove
 
   return (
     <div className="flex flex-col">
-      <header className="sticky top-14 z-20 border-b lg:top-0 border-line bg-paper/95 px-4 pb-3 pt-4 backdrop-blur-sm sm:px-5">
+      <header className={clsx('sticky z-20 border-b border-line bg-paper/95 px-4 pb-3 backdrop-blur-sm sm:px-5', inSheet ? 'top-0 pt-0.5' : 'top-14 pt-4 lg:top-0')}>
         <div className="flex items-center justify-between gap-2">
           <p className="label truncate text-concrete-dark">
             JOB #{job.code} · {job.locality} · {inr(job.wagePerDay)}/day
@@ -63,7 +65,7 @@ function Loaded({ view, activeId, selectedId, celebrate, workerOverrides, onHove
             {filled ? 'Filled' : 'Live'}
           </span>
         </div>
-        <h2 className="mt-2 font-display text-[26px] font-bold leading-[1.05] tracking-tight">
+        <h2 className={clsx('font-display font-bold leading-[1.05] tracking-tight', inSheet ? 'mt-1 text-[22px]' : 'mt-2 text-[26px]')}>
           {job.workersNeeded} × {skillLabel(job.skill)}
           <span className="serif-i font-normal text-concrete-dark">
             {' '}
@@ -72,7 +74,7 @@ function Loaded({ view, activeId, selectedId, celebrate, workerOverrides, onHove
         </h2>
 
         {/* hired progress */}
-        <div className="mt-3">
+        <div className={inSheet ? 'mt-2' : 'mt-3'}>
           <div className="flex items-baseline justify-between">
             <p className="text-sm font-medium" aria-live="polite">
               <span className="font-mono">{Math.min(hired, job.workersNeeded)}</span> of <span className="font-mono">{job.workersNeeded}</span> hired
@@ -238,11 +240,11 @@ export function Skeletons() {
   );
 }
 
-function EmptyState({ workerCount }: { workerCount: number }) {
+function EmptyState({ workerCount, inSheet = false }: { workerCount: number; inSheet?: boolean }) {
   return (
-    <div className="flex h-full flex-col px-5 py-6">
+    <div className={clsx('flex h-full flex-col px-5', inSheet ? 'pb-6 pt-1' : 'py-6')}>
       <p className="label text-concrete">Matches</p>
-      <h2 className="mt-3 font-display text-[28px] font-bold leading-[1.02] tracking-tight">
+      <h2 className="mt-2 font-display text-[28px] font-bold leading-[1.02] tracking-tight">
         Ranked, nearby, <span className="serif-i font-normal">and explained.</span>
       </h2>
       <p className="mt-3 max-w-sm text-sm leading-relaxed text-concrete-dark">

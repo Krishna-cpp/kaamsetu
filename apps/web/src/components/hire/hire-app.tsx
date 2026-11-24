@@ -1,7 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { skillLabel, type Job, type MatchStatus, type PublicWorker } from '@kaamsetu/core';
@@ -11,8 +11,22 @@ import { ToastProvider, useToast } from '@/components/ui/toast';
 import { Composer } from './composer';
 import { MatchList } from './match-list';
 import { RecentJobs } from './recent-jobs';
+import { BottomSheet, type SheetState } from './bottom-sheet';
 
 const POLL_MS = 2500;
+
+/** < 768px: matches live in a bottom sheet over the map. */
+function useIsMobile() {
+  const [m, setM] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const on = () => setM(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return m;
+}
 
 export function HireApp() {
   return (
@@ -43,6 +57,25 @@ function HireInner() {
   const prevStatus = useRef(new Map<string, MatchStatus>());
   const justPosted = useRef<string | null>(null);
   const mapRef = useRef<HTMLElement>(null);
+  const asideRef = useRef<HTMLElement>(null);
+  const isMobile = useIsMobile();
+  const [sheet, setSheet] = useState<SheetState>('peek');
+  const [editMobile, setEditMobile] = useState(false);
+  const scrollToMap = useRef(false);
+
+  // After opening a job on small screens, bring the map (+ sheet) into view. Runs after the
+  // composer has collapsed on mobile, so the target position is final.
+  useEffect(() => {
+    if (!jobId || !scrollToMap.current) return;
+    scrollToMap.current = false;
+    const raf = requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // phones: the compact "Posted · JOB" bar + map exactly fill the viewport; tablets: just the map
+      const el = window.innerWidth < 768 ? asideRef.current : mapRef.current;
+      el?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [jobId]);
 
   const loadRecent = useCallback(() => {
     api
@@ -52,7 +85,10 @@ function HireInner() {
   }, []);
 
   useEffect(() => {
-    api.workers().then(setAllWorkers).catch(() => undefined);
+    api
+      .workers()
+      .then(setAllWorkers)
+      .catch(() => undefined);
     loadRecent();
   }, [loadRecent]);
 
@@ -98,7 +134,11 @@ function HireInner() {
           const prev = prevStatus.current.get(m.id);
           if (!first && prev && prev !== m.status && m.status === 'accepted') {
             const firstName = m.worker.name.split(' ')[0];
-            toast.push({ tone: 'success', title: `${firstName} accepted · contact unlocked`, body: `${skillLabel(v.job.skill)} · ${m.distanceKm.toFixed(1)} km away` });
+            toast.push({
+              tone: 'success',
+              title: `${firstName} accepted · contact unlocked`,
+              body: `${skillLabel(v.job.skill)} · ${m.distanceKm.toFixed(1)} km away`,
+            });
             flash(m.id);
             newlyFilled = true;
           }
@@ -106,11 +146,17 @@ function HireInner() {
         }
         if (first && justPosted.current === v.job.id) {
           const sent = v.matches.filter((m) => m.status !== 'suggested').length;
-          toast.push({ title: `Voice alerts sent to ${sent} workers`, body: `JOB #${v.job.code} · ${v.job.locality} · within ${v.job.radiusKm} km` });
+          toast.push({
+            title: `Voice alerts sent to ${sent} workers`,
+            body: `JOB #${v.job.code} · ${v.job.locality} · within ${v.job.radiusKm} km`,
+          });
           justPosted.current = null;
         }
         if (newlyFilled && v.job.status === 'filled') {
-          window.setTimeout(() => toast.push({ tone: 'success', title: `JOB #${v.job.code} is filled`, body: `All ${v.job.workersNeeded} slots taken.` }), 900);
+          window.setTimeout(
+            () => toast.push({ tone: 'success', title: `JOB #${v.job.code} is filled`, body: `All ${v.job.workersNeeded} slots taken.` }),
+            900,
+          );
           loadRecent();
         }
         first = false;
@@ -142,8 +188,10 @@ function HireInner() {
     (id: string) => {
       setSelectedId(null);
       setHoverId(null);
+      setSheet('half');
+      setEditMobile(false);
       router.replace(`/hire?job=${encodeURIComponent(id)}`, { scroll: false });
-      if (window.innerWidth < 1024) mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      scrollToMap.current = window.innerWidth < 1024;
     },
     [router],
   );
@@ -171,7 +219,13 @@ function HireInner() {
 
   /* ── map data ── */
   const jobPin: JobPin | null = view
-    ? { id: view.job.id, lat: view.job.location.lat, lng: view.job.location.lng, radiusKm: view.job.radiusKm, label: `Job #${view.job.code} in ${view.job.locality}` }
+    ? {
+        id: view.job.id,
+        lat: view.job.location.lat,
+        lng: view.job.location.lng,
+        radiusKm: view.job.radiusKm,
+        label: `Job #${view.job.code} in ${view.job.locality}`,
+      }
     : null;
   const workerPins: WorkerPin[] = useMemo(
     () =>
@@ -192,30 +246,76 @@ function HireInner() {
   const fitKey = jobId ? `${jobId}:${view ? 1 : 0}` : `all:${allWorkers.length}`;
   const activeId = hoverId ?? selectedId;
 
+  const matchList = (inSheet: boolean) => (
+    <MatchList
+      view={view}
+      posting={posting}
+      loading={loading}
+      error={error}
+      onRetry={() => setNonce((n) => n + 1)}
+      activeId={activeId}
+      selectedId={selectedId}
+      celebrate={celebrate}
+      workerOverrides={overrides}
+      onHover={setHoverId}
+      onSelect={(id) => setSelectedId((s) => (s === id ? null : id))}
+      onRespond={respond}
+      onRated={(w) => setOverrides((o) => ({ ...o, [w.id]: w }))}
+      workerCount={allWorkers.length}
+      inSheet={inSheet}
+    />
+  );
+
   return (
     <div className="pt-14 lg:h-dvh lg:overflow-hidden">
       <div className="md:grid md:grid-cols-2 lg:h-[calc(100dvh-56px)] lg:grid-cols-[minmax(360px,400px)_minmax(0,1fr)_minmax(360px,400px)] xl:grid-cols-[420px_minmax(0,1fr)_420px]">
         {/* composer */}
         <aside
-          className="ks-scroll border-line md:col-start-1 md:row-start-2 md:border-r lg:row-start-1 lg:overflow-y-auto"
+          ref={asideRef}
+          className="ks-scroll scroll-mt-14 border-line md:col-start-1 md:row-start-2 md:border-r lg:row-start-1 lg:overflow-y-auto"
           aria-label="Post a job"
         >
           {view && (
-            <div className="flex items-center justify-between gap-2 border-b border-line bg-paper-2/60 px-4 py-2 sm:px-6">
-              <p className="label truncate text-concrete-dark">Viewing JOB #{view.job.code}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  router.replace('/hire', { scroll: false });
-                  setComposerKey((k) => k + 1);
-                }}
-                className="label inline-flex items-center gap-1 hover:text-hivis"
-              >
-                <Plus className="size-3.5" aria-hidden /> New job
-              </button>
+            <div className="flex items-center justify-between gap-2 border-b border-line bg-paper-2/60 px-4 py-2 max-md:h-8 max-md:py-0 sm:px-6">
+              <p className="label truncate text-concrete-dark">
+                <span className="md:hidden">
+                  {view.job.source === 'seed' ? 'Viewing' : 'Posted'} · JOB #{view.job.code} · {view.job.locality}
+                </span>
+                <span className="max-md:hidden">Viewing JOB #{view.job.code}</span>
+              </p>
+              <div className="flex shrink-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditMobile((v) => !v)}
+                  aria-expanded={editMobile}
+                  className="label inline-flex items-center gap-1 hover:text-hivis md:hidden"
+                >
+                  <Pencil className="size-3" aria-hidden /> {editMobile ? 'Hide' : 'Edit'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    router.replace('/hire', { scroll: false });
+                    setComposerKey((k) => k + 1);
+                  }}
+                  className="label inline-flex items-center gap-1 hover:text-hivis"
+                >
+                  <Plus className="size-3.5" aria-hidden /> New job
+                </button>
+              </div>
             </div>
           )}
-          <Composer key={composerKey} onPosted={onPosted} onPostingChange={setPosting} onNewJob={() => router.replace('/hire', { scroll: false })} />
+          <div className={clsx(jobId && !editMobile && 'max-md:hidden')}>
+            <Composer
+              key={composerKey}
+              onPosted={onPosted}
+              onPostingChange={(v) => {
+                setPosting(v);
+                if (v) setSheet('half');
+              }}
+              onNewJob={() => router.replace('/hire', { scroll: false })}
+            />
+          </div>
           <div className="hidden lg:block">
             <RecentJobs jobs={recent} activeId={jobId} onOpen={openJob} />
           </div>
@@ -224,7 +324,11 @@ function HireInner() {
         {/* map */}
         <section
           ref={mapRef}
-          className="relative h-[46vh] min-h-[320px] scroll-mt-14 border-y border-line md:col-span-2 md:row-start-1 md:h-[42vh] md:border-t-0 lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:h-auto lg:border-y-0"
+          className={clsx(
+            'relative min-h-[480px] scroll-mt-14',
+            view ? 'h-[calc(100dvh-88px)]' : 'h-[calc(100dvh-56px)]',
+            ' overflow-hidden border-y border-line md:col-span-2 md:min-h-[320px] md:overflow-visible md:row-start-1 md:h-[42vh] md:border-t-0 lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:h-auto lg:border-y-0',
+          )}
           aria-label="Map"
         >
           <KMap
@@ -235,32 +339,32 @@ function HireInner() {
             onHover={setHoverId}
             onSelect={(id) => setSelectedId((s) => (s === id ? null : id))}
             fitKey={fitKey}
+            fitPadding={
+              isMobile
+                ? {
+                    top: 64,
+                    right: 28,
+                    bottom: Math.round((typeof window === 'undefined' ? 844 : window.innerHeight) * 0.55) + 16,
+                    left: 28,
+                  }
+                : undefined
+            }
             ariaLabel={view ? `Map of workers near ${view.job.locality}` : 'Map of available workers in Pune'}
           />
           <MapLegend hasJob={!!view} count={allWorkers.length} locality={view?.job.locality} />
+          {isMobile && (
+            <BottomSheet state={sheet} onStateChange={setSheet} containerRef={mapRef} label="Matches">
+              {matchList(true)}
+            </BottomSheet>
+          )}
         </section>
 
         {/* matches */}
         <aside
-          className="ks-scroll border-line md:col-start-2 md:row-start-2 lg:col-start-3 lg:row-start-1 lg:overflow-y-auto lg:border-l"
+          className="ks-scroll border-line max-md:hidden md:col-start-2 md:row-start-2 lg:col-start-3 lg:row-start-1 lg:overflow-y-auto lg:border-l"
           aria-label="Matches"
         >
-          <MatchList
-            view={view}
-            posting={posting}
-            loading={loading}
-            error={error}
-            onRetry={() => setNonce((n) => n + 1)}
-            activeId={activeId}
-            selectedId={selectedId}
-            celebrate={celebrate}
-            workerOverrides={overrides}
-            onHover={setHoverId}
-            onSelect={(id) => setSelectedId((s) => (s === id ? null : id))}
-            onRespond={respond}
-            onRated={(w) => setOverrides((o) => ({ ...o, [w.id]: w }))}
-            workerCount={allWorkers.length}
-          />
+          {!isMobile && matchList(false)}
         </aside>
 
         <div className="md:col-span-2 lg:hidden">
