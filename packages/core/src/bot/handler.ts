@@ -156,13 +156,20 @@ async function onMessage(ctx: Ctx, chatId: string, s: Session, msg: TgMessage) {
       audioUrl = file.path.startsWith('voice/webchat/')
         ? null
         : await ctx.storage.put(`voice/${chatId}/${Date.now()}.ogg`, file.data, media.mime_type ?? 'audio/ogg').catch(() => null);
-      const tr = await ctx.stt('worker').transcribe(file.data, {
-        mimeType: media.mime_type ?? 'audio/ogg',
-        filename: (media.mime_type ?? '').includes('webm') ? 'voice.webm' : 'voice.ogg',
-        languageHint: s.lang ?? null,
-      });
-      transcript = tr.text;
-      detected = tr.language;
+      try {
+        const tr = await ctx.stt('worker').transcribe(file.data, {
+          mimeType: media.mime_type ?? 'audio/ogg',
+          filename: (media.mime_type ?? '').includes('webm') ? 'voice.webm' : 'voice.ogg',
+          languageHint: s.lang ?? null,
+        });
+        transcript = tr.text;
+        detected = tr.language;
+      } catch (e) {
+        // Speech service unavailable (e.g. quota): never guess a transcript, ask the worker to type instead.
+        console.warn('[bot] STT failed:', (e as Error).message);
+        await ctx.channel.sendText(chatId, t('sttFailed', lang));
+        return;
+      }
     }
   }
   if (!transcript || transcript.startsWith('/')) {

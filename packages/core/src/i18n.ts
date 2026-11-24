@@ -84,6 +84,11 @@ export const STRINGS = {
     hi: 'माफ़ कीजिए, कुछ गड़बड़ हो गई। कृपया फिर से कोशिश कीजिए।',
     mr: 'माफ करा, काहीतरी चुकलं. कृपया पुन्हा प्रयत्न करा.',
   },
+  sttFailed: {
+    en: "Sorry, I couldn't listen to voice notes right now. Please type it instead: your name, your work, your area and how much you want per day.",
+    hi: 'माफ़ कीजिए, अभी मैं वॉइस मैसेज नहीं सुन पा रहा। कृपया लिखकर भेजिए: अपना नाम, काम, इलाका और रोज़ कितने पैसे चाहिए।',
+    mr: 'माफ करा, आत्ता मी व्हॉइस मेसेज ऐकू शकत नाही. कृपया लिहून पाठवा: तुमचं नाव, काम, परिसर आणि रोज किती पैसे हवेत.',
+  },
   noJobsNearby: {
     en: 'There is no matching work near you right now. I will tell you as soon as something comes.',
     hi: 'अभी आपके पास कोई काम नहीं है। जैसे ही आएगा, मैं बताऊँगा।',
