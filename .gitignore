@@ -29,3 +29,6 @@ test-results/
 .DS_Store
 Thumbs.db
 *.log
+
+# runtime TTS cache / uploaded voice notes (local storage adapter)
+apps/web/public/media/
