@@ -33,3 +33,6 @@ Thumbs.db
 
 # runtime TTS cache / uploaded voice notes (local storage adapter)
 apps/web/public/media/
+
+# ElevenLabs voice-design previews
+.voice-previews/

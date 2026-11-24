@@ -20,6 +20,7 @@
     "agent:create": "tsx scripts/create-elevenlabs-agent.ts",
     "agent:test": "tsx scripts/test-agent.ts",
     "voices": "tsx scripts/list-voices.ts",
+    "voices:design": "tsx scripts/design-voices.ts",
     "test": "vitest run",
     "typecheck": "tsc -p packages/core --noEmit && tsc -p services/bot --noEmit && npm run typecheck -w @kaamsetu/web",
     "format": "prettier --write ."
