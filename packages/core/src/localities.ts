@@ -65,3 +65,10 @@ export function getLocality(name: string): Locality | null {
   const n = norm(name);
   return PUNE_LOCALITIES.find((l) => norm(l.name) === n || l.aliases.includes(n)) ?? findLocalityInText(n);
 }
+
+/** Locality name in the speaker's script (Devanagari for hi/mr) so TTS pronounces it natively. */
+export function localityLabel(name: string, lang: 'hi' | 'mr' | 'en' | string): string {
+  if (lang === 'en') return name;
+  const loc = getLocality(name);
+  return loc?.aliases.find((a) => /[ऀ-ॿ]/.test(a)) ?? name;
+}

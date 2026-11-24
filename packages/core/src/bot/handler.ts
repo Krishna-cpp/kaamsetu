@@ -8,6 +8,7 @@ import { t } from '../i18n';
 import { isLanguage, LANGUAGES, LANGUAGE_CODES, type Language } from '../languages';
 import { detectLanguage } from '../extract-rules';
 import { skillLabel } from '../skills';
+import { localityLabel } from '../localities';
 import {
   activateWorker,
   deleteWorkerData,
@@ -195,7 +196,7 @@ async function processIntro(ctx: Ctx, chatId: string, s: Session, transcript: st
   const spoken = t('confirmProfile', lang, {
     name: w.name.split(' ')[0] ?? w.name,
     skill: w.skills.map((k) => skillLabel(k, lang)).join(', '),
-    locality: w.locality,
+    locality: localityLabel(w.locality, lang),
     wage: w.expectedWage,
   });
   const card =

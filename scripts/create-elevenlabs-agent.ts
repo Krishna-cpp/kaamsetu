@@ -102,10 +102,15 @@ async function main() {
   let toolIds: string[] | null = null;
   try {
     toolIds = [];
+    // Reuse tools created by a previous run (updated in place) so re-running doesn't duplicate them
+    const existingTools = await el<{ tools: { id: string; tool_config: { name: string } }[] }>('/v1/convai/tools', 'GET').catch(() => ({ tools: [] }));
     for (const t of tools) {
-      const res = await el<{ id: string }>('/v1/convai/tools', 'POST', { tool_config: t });
+      const prev = existingTools.tools.find((x) => x.tool_config.name === t.name);
+      const res = prev
+        ? (await el('/v1/convai/tools/' + prev.id, 'PATCH', { tool_config: t }), { id: prev.id })
+        : await el<{ id: string }>('/v1/convai/tools', 'POST', { tool_config: t });
       toolIds.push(res.id);
-      console.log(`tool ${t.name} → ${res.id}`);
+      console.log(`tool ${t.name} → ${res.id}${prev ? ' (updated)' : ''}`);
     }
   } catch (e) {
     console.warn('Could not create standalone tools, using inline tools:', (e as Error).message);
@@ -122,7 +127,6 @@ async function main() {
     // Non-English agents need a v2.5 model (Flash = lowest latency for phone calls)
     tts: { voice_id: voiceId, model_id: 'eleven_flash_v2_5' },
     language_presets: {
-      mr: { overrides: { agent: { first_message: 'नमस्कार! मी काम दीदी, कामसेतुकडून. तुम्ही काम शोधताय, की कोणाला कामावर ठेवायचंय?', language: 'mr' } } },
       en: { overrides: { agent: { first_message: "Namaste! I'm Kaam Didi from KaamSetu. Are you looking for work, or looking to hire someone?", language: 'en' } } },
     },
   };

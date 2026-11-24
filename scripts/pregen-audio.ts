@@ -22,7 +22,7 @@ async function main() {
   const today = todayIST();
   const tomorrow = new Date(Date.parse(today) + 86_400_000).toISOString().slice(0, 10);
   const alert = (lang: Language) =>
-    jobAlertText(lang, { workerName: 'Ramesh Pawar', skill: 'plumber', locality: lang === 'en' ? 'Kothrud' : 'कोथरूड', distanceKm: 1.2, wage: 850, days: 1, startDate: tomorrow, today });
+    jobAlertText(lang, { workerName: lang === 'en' ? 'Ramesh Pawar' : 'रमेश पवार', skill: 'plumber', locality: lang === 'en' ? 'Kothrud' : 'कोथरूड', distanceKm: 1.2, wage: 850, days: 1, startDate: tomorrow, today });
 
   const workerVoice = process.env.ELEVENLABS_WORKER_VOICE_ID ?? 'nPczCjzI2devNBz1zQrb';
   const clips: { file: string; lang: Language; text: string; voiceId?: string }[] = [

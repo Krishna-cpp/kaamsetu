@@ -1,6 +1,7 @@
 import type { Language } from './languages';
 import type { Skill } from './skills';
 import { skillLabel } from './skills';
+import { localityLabel } from './localities';
 
 /**
  * All bot + voice copy. Written to be *spoken* first (TTS) and read second.
@@ -52,11 +53,11 @@ export const STRINGS = {
   },
   jobAlert: {
     en: (p: Params) =>
-      `${p.name}, there is ${p.skill} work in ${p.locality}, ${p.distance} kilometres away. ${p.wage} rupees a day, for ${p.days} days, starting ${p.start}. Press Accept if you want it.`,
+      `${p.name}, there is ${String(p.skill).toLowerCase()} work in ${p.locality}, ${p.distance} kilometres away. ${p.wage} rupees a day, for ${p.days} ${Number(p.days) === 1 ? "day" : "days"}, starting ${p.start}. Press Accept if you want it.`,
     hi: (p: Params) =>
       `${p.name} जी, ${p.locality} में ${p.distance} किलोमीटर दूर ${p.skill} का काम है। ${p.wage} रुपये रोज़, ${p.days} दिन के लिए, ${p.start} से। काम चाहिए तो "हाँ" दबाइए।`,
     mr: (p: Params) =>
-      `${p.name}, ${p.locality} मध्ये ${p.distance} किलोमीटर अंतरावर ${p.skill} चं काम आहे. रोज ${p.wage} रुपये, ${p.days} दिवसांसाठी, ${p.start} पासून. काम हवं असेल तर "हो" दाबा.`,
+      `${p.name}, ${p.locality} मध्ये ${p.distance} किलोमीटर अंतरावर ${p.skill}चं काम आहे. रोज ${p.wage} रुपये, ${p.days} ${Number(p.days) === 1 ? "दिवसासाठी" : "दिवसांसाठी"}, ${p.start} पासून. काम हवं असेल तर "हो" दाबा.`,
   },
   accepted: {
     en: (p: Params) => `Wonderful! The employer ${p.employer} has been told. Call them on ${p.phone}. All the best!`,
@@ -128,7 +129,7 @@ export function jobAlertText(
   return t('jobAlert', lang, {
     name: p.workerName.split(' ')[0] ?? p.workerName,
     skill: skillLabel(p.skill, lang),
-    locality: p.locality,
+    locality: localityLabel(p.locality, lang),
     distance: p.distanceKm < 1 ? '1' : String(Math.round(p.distanceKm * 10) / 10),
     wage: p.wage,
     days: p.days,

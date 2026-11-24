@@ -22,11 +22,26 @@ process.on('SIGINT', () => {
   setTimeout(() => process.exit(0), 300);
 });
 
+/** Retry Telegram calls that hit 429 (respects "retry after N"). */
+async function withRetry<T>(fn: () => Promise<T>, tries = 6): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const m = /retry after (\d+)/i.exec((e as Error).message);
+      if (!m || i >= tries) throw e;
+      const wait = Number(m[1]) + 1;
+      console.log(`Telegram rate limit, waiting ${wait}s…`);
+      await new Promise((r) => setTimeout(r, wait * 1000));
+    }
+  }
+}
+
 async function main() {
-  const me = await tg.call<{ username: string }>('getMe', {});
+  const me = await withRetry(() => tg.call<{ username: string }>('getMe', {}));
   // Long-polling and webhooks are mutually exclusive; drop any webhook while developing locally.
-  await tg.call('deleteWebhook', { drop_pending_updates: false });
-  await tg.call('setMyCommands', {
+  await withRetry(() => tg.call('deleteWebhook', { drop_pending_updates: false }));
+  await withRetry(() => tg.call('setMyCommands', {
     commands: [
       { command: 'start', description: 'Start / शुरू करें / सुरू करा' },
       { command: 'jobs', description: 'Work near me / पास में काम' },
@@ -34,7 +49,7 @@ async function main() {
       { command: 'lang', description: 'Change language / भाषा' },
       { command: 'delete', description: 'Delete my data / मेरा डेटा हटाओ' },
     ],
-  });
+  }));
   console.log(`KaamSetu bot @${me.username} polling…`, integrationStatus());
 
   while (running) {
