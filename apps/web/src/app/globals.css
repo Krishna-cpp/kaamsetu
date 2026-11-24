@@ -751,3 +751,19 @@ select.ks-field {
   }
 }
 /* ── /a11y + perf ── */
+
+/* ── hero map layering (lead) ── */
+/* The map never sits under the nav/meta band, and on desktop fades out under the headline column */
+.ks-hero-map {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 96px, #000 176px);
+  mask-image: linear-gradient(to bottom, transparent 96px, #000 176px);
+}
+@media (min-width: 1024px) {
+  .ks-hero-map {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 22%), linear-gradient(to bottom, transparent 96px, #000 176px);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(to right, transparent 0%, #000 22%), linear-gradient(to bottom, transparent 96px, #000 176px);
+    mask-composite: intersect;
+  }
+}
+/* ── /hero map layering ── */

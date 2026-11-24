@@ -154,7 +154,7 @@ export function LiveApp() {
         </dl>
 
         {/* body */}
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_440px]">
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_440px]">
           <section className="relative h-[52vh] min-h-[320px] border-b border-line-dark lg:h-auto lg:border-b-0 lg:border-r" aria-label="Live map">
             <KMap variant="dark" dots={dots} jobs={jobPins} pings={pings} fitKey={`live:${dots.length > 0 ? 1 : 0}`} ariaLabel="Live map of workers and open jobs in Pune" />
             <ul className="label pointer-events-none absolute left-3 top-3 z-10 flex flex-wrap gap-x-3 gap-y-1 border border-line-dark bg-ink/90 px-2.5 py-1.5 text-[10px] text-paper/70">

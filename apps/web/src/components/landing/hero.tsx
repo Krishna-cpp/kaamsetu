@@ -32,7 +32,7 @@ export function Hero() {
   return (
     <section ref={root} aria-labelledby="hero-title" className="relative isolate flex min-h-[100svh] flex-col overflow-hidden pt-14">
       <div className="grid-rules pointer-events-none absolute inset-0 -z-20 opacity-60" aria-hidden />
-      <div data-hero-map className="absolute inset-0 -z-10">
+      <div data-hero-map className="ks-hero-map absolute inset-0 -z-10 lg:left-1/2">
         <PuneMap
           avoid={title}
           className="h-full w-full"
@@ -67,7 +67,7 @@ export function Hero() {
         <p className="label mb-6 hidden items-center gap-3 lg:flex" data-hero-fade>
           <span className="inline-block h-px w-10 bg-ink" /> Vol. 01 · A job network that listens
         </p>
-        <h1 ref={title} id="hero-title" className="display text-[clamp(72px,20vw,200px)] md:text-[clamp(96px,13.4vw,200px)]">
+        <h1 ref={title} id="hero-title" className="display relative text-[clamp(64px,min(19vw,11vh),150px)] md:text-[clamp(64px,min(7.4vw,15.5vh),156px)]">
           <span className="ks-mask block">
             <span className="ks-rise block">Kaam milega.</span>
           </span>

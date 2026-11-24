@@ -22,10 +22,10 @@ const VOICE = [
 ];
 
 const PRIVACY = [
-  { icon: Mic, k: 'Consent by voice', v: 'Nothing is saved until the worker says yes, in their language.' },
+  { icon: Mic, k: 'Consent by voice', v: 'Nothing is saved until the worker agrees, in their language.' },
   { icon: PhoneOff, k: 'Phone hidden', v: 'Numbers are shared only after both sides accept.' },
   { icon: MapPin, k: 'Locality only', v: 'Public profiles show “Kothrud”, never a street or a pin.' },
-  { icon: Trash2, k: '“Delete my data”', v: 'Say it to the bot and the profile, audio and matches are gone.' },
+  { icon: Trash2, k: '“Delete my data”', v: 'Say it to the bot and the profile, ratings and matches are gone.' },
 ];
 
 function Dial({ value }: { value: number }) {

@@ -398,8 +398,9 @@ export function PuneMap({
           const label = `MATCH ${m.score.toFixed(2)} · ${m.km.toFixed(1)} KM`;
           c.font = '600 9.5px ui-monospace, "Geist Mono", monospace';
           const tw = c.measureText(label).width;
-          const tx = Math.min(b.x + 10, W - tw - 18);
-          const ty = b.y - 22;
+          // keep the tag inside the map: clear of the nav/meta band at the top and of every edge
+          const tx = Math.max(8, Math.min(b.x + 10, W - tw - 18));
+          const ty = Math.max(132, Math.min(b.y - 22, H - 32));
           c.fillStyle = C.ink;
           c.fillRect(tx, ty, tw + 10, 15);
           c.fillStyle = C.paper;

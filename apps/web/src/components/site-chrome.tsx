@@ -60,9 +60,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           'fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-300',
           dark
             ? 'dark-nav border-b border-line-dark bg-ink text-paper'
-            : appLike || scrolled
-              ? 'border-b border-line bg-paper/90 backdrop-blur-md'
-              : 'border-b border-transparent',
+            : // always opaque: page content (e.g. the hero map) must never show through or sit over the nav
+              'border-b border-line bg-paper/95 backdrop-blur-md',
         )}
       >
         <nav className="container-x flex h-14 items-center justify-between gap-4" aria-label="Primary">

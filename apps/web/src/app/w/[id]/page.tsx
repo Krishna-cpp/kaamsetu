@@ -59,7 +59,7 @@ export default async function WorkerPage({ params }: Params) {
 
   return (
     <div className="min-h-dvh pt-14">
-      <div className="container-x grid max-w-[1240px] items-start gap-10 py-8 sm:py-12 lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:gap-16 lg:py-16">
+      <div className="container-x grid max-w-[1240px] grid-cols-[minmax(0,1fr)] items-start gap-10 py-8 sm:py-12 lg:grid-cols-[minmax(0,580px)_minmax(0,1fr)] lg:gap-16 lg:py-16">
         {/* ── ID card ── */}
         <div className="relative mx-auto w-full max-w-[580px]">
           {/* lanyard */}
