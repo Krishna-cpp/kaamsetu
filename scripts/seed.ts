@@ -22,7 +22,7 @@ import {
   type Skill,
   type Worker,
 } from '@kaamsetu/core/server';
-import { skillLabel } from '@kaamsetu/core';
+import { localityLabel, skillLabel } from '@kaamsetu/core';
 
 // Deterministic PRNG so the demo looks the same every time
 let seed = 20261124;
@@ -178,7 +178,7 @@ function buildWorkers(): Worker[] {
     const jobsCompleted = i === 0 ? 12 : rnd() < 0.15 ? 0 : int(1, 45);
     const ratingCount = Math.min(jobsCompleted, Math.max(0, jobsCompleted - int(0, 3)));
     const ratingAvg = ratingCount ? Math.round((3.7 + rnd() * 1.3) * 10) / 10 : 0;
-    const years = int(1, 18);
+    const years = i === 0 ? 9 : int(1, 18);
     const createdMinsAgo = int(3 * 1440, 120 * 1440);
     const w: Worker = {
       id: i === 0 ? 'w_ramesh' : `w_seed${String(i).padStart(3, '0')}`,
@@ -203,7 +203,7 @@ function buildWorkers(): Worker[] {
       },
       verified: jobsCompleted >= 3,
       status: 'active',
-      introTranscript: INTROS[language](name.split(' ')[0]!, skillLabel(skills[0]!, language), loc.name, expectedWage, years),
+      introTranscript: INTROS[language](name.split(' ')[0]!, skillLabel(skills[0]!, language), localityLabel(loc.name, language), expectedWage, years),
       introAudioUrl: null,
       consentAt: iso(createdMinsAgo),
       createdAt: iso(createdMinsAgo),

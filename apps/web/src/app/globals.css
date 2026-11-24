@@ -439,6 +439,7 @@ html.lenis body {
   scrollbar-color: var(--color-line-dark) transparent;
 }
 
+@layer components {
 /* field */
 .ks-field {
   width: 100%;
@@ -467,6 +468,7 @@ select.ks-field {
   background-position: right 2px center;
   padding-right: 18px;
 }
+}
 
 @media print {
   header,
@@ -482,3 +484,236 @@ select.ks-field {
   }
 }
 /* ── /app ── */
+
+/* ── landing ── */
+.ks-landing {
+  overflow-x: clip;
+}
+
+/* marquee: two identical rows, -50% loop */
+.ks-marquee-track {
+  animation: var(--animate-marquee);
+  animation-duration: 46s;
+  will-change: transform;
+}
+.ks-marquee:hover .ks-marquee-track {
+  animation-play-state: paused;
+}
+
+/* waveform bar colours (lit = played portion) */
+.ks-wave > span {
+  transition: background-color 120ms linear;
+}
+.ks-wave-ink > span {
+  background: rgb(18 18 16 / 0.28);
+}
+.ks-wave-ink > span[data-lit='true'] {
+  background: var(--color-ink);
+}
+.ks-wave-paper > span {
+  background: rgb(243 239 230 / 0.35);
+}
+.ks-wave-paper > span[data-lit='true'] {
+  background: var(--color-hivis);
+}
+.ks-wave-hivis > span {
+  background: var(--color-hivis);
+}
+/* looping "recording" waveform for static mockups */
+.ks-wave-live > span {
+  animation: ks-bar 1.1s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes ks-bar {
+  0% {
+    scale: 1 0.35;
+  }
+  100% {
+    scale: 1 1;
+  }
+}
+
+/* chat */
+.ks-chat-bg {
+  background-color: var(--color-paper-2);
+  background-image: radial-gradient(rgb(18 18 16 / 0.07) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+.ks-noscroll {
+  scrollbar-width: none;
+}
+.ks-noscroll::-webkit-scrollbar {
+  display: none;
+}
+.ks-fade-up {
+  animation: ks-fade-up 380ms var(--ease-out-expo) both;
+}
+@keyframes ks-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.ks-typing > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-concrete);
+  animation: ks-typing 1s ease-in-out infinite;
+}
+.ks-typing > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.ks-typing > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ks-typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+.ks-accept {
+  position: relative;
+}
+.ks-accept::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: 0 0 0 0 var(--color-hivis);
+  animation: ks-ping 1.6s var(--ease-out-expo) infinite;
+  pointer-events: none;
+}
+@keyframes ks-ping {
+  0% {
+    box-shadow: 0 0 0 0 rgb(255 91 20 / 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 10px rgb(255 91 20 / 0);
+  }
+}
+
+/* buttons used inside landing sections */
+.ks-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.15rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  transition:
+    background-color 200ms var(--ease-snap),
+    color 200ms var(--ease-snap),
+    border-color 200ms var(--ease-snap);
+}
+.ks-btn-hivis {
+  background: var(--color-hivis);
+  color: var(--color-ink);
+}
+.ks-btn-hivis:hover {
+  background: var(--color-paper);
+}
+.ks-btn-paper {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+.ks-btn-paper:hover {
+  background: var(--color-hivis);
+}
+.ks-btn-ghost {
+  border: 1px solid rgb(243 239 230 / 0.35);
+  color: var(--color-paper);
+}
+.ks-btn-ghost:hover {
+  border-color: var(--color-paper);
+  background: rgb(243 239 230 / 0.08);
+}
+
+/* how-it-works: staged reveals keyed off [data-active] on the panel */
+.ks-step [data-anim] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 500ms var(--ease-out-expo) var(--d, 0ms),
+    transform 700ms var(--ease-out-expo) var(--d, 0ms);
+}
+.ks-step[data-active='true'] [data-anim] {
+  opacity: 1;
+  transform: none;
+}
+.ks-step .ks-grow {
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 800ms var(--ease-out-expo) var(--d, 0ms);
+}
+.ks-step[data-active='true'] .ks-grow {
+  transform: none;
+}
+.ks-step .ks-reveal {
+  filter: blur(7px);
+  opacity: 0.4;
+  transition:
+    filter 700ms var(--ease-out-expo) var(--d, 0ms),
+    opacity 700ms var(--ease-out-expo) var(--d, 0ms);
+}
+.ks-step[data-active='true'] .ks-reveal {
+  filter: none;
+  opacity: 1;
+}
+.ks-mark {
+  background: linear-gradient(transparent 62%, var(--color-signal) 62%);
+  color: inherit;
+  padding-inline: 0.05em;
+}
+
+/* cursor crosshair + soft highlight on interactive cards */
+.ks-spot {
+  position: relative;
+  isolation: isolate;
+}
+.ks-spot::before,
+.ks-spot::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 250ms ease;
+  z-index: -1;
+}
+.ks-spot::before {
+  inset: 0;
+  background:
+    radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgb(255 91 20 / 0.09), transparent 70%),
+    linear-gradient(var(--color-hivis), var(--color-hivis)) var(--mx, 50%) 0 / 1px 100% no-repeat,
+    linear-gradient(var(--color-hivis), var(--color-hivis)) 0 var(--my, 50%) / 100% 1px no-repeat;
+}
+.ks-spot-dark::before {
+  background:
+    radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgb(255 91 20 / 0.16), transparent 70%),
+    linear-gradient(rgb(255 91 20 / 0.6), rgb(255 91 20 / 0.6)) var(--mx, 50%) 0 / 1px 100% no-repeat,
+    linear-gradient(rgb(255 91 20 / 0.6), rgb(255 91 20 / 0.6)) 0 var(--my, 50%) / 100% 1px no-repeat;
+}
+.ks-spot[data-spot='on']::before {
+  opacity: 0.55;
+}
+
+/* id card */
+.ks-idcard {
+  box-shadow: 6px 6px 0 var(--color-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ks-marquee-track,
+  .ks-wave-live > span {
+    animation: none !important;
+  }
+}
+/* ── /landing ── */

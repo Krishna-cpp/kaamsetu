@@ -41,6 +41,7 @@ function MockPill() {
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const appLike = path.startsWith('/hire') || path.startsWith('/live');
+  const dark = path.startsWith('/live');
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 24);
@@ -57,12 +58,16 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <header
         className={clsx(
           'fixed inset-x-0 top-0 z-50 transition-[background-color,border-color] duration-300',
-          appLike || scrolled ? 'border-b border-line bg-paper/90 backdrop-blur-md' : 'border-b border-transparent',
+          dark
+            ? 'dark-nav border-b border-line-dark bg-ink text-paper'
+            : appLike || scrolled
+              ? 'border-b border-line bg-paper/90 backdrop-blur-md'
+              : 'border-b border-transparent',
         )}
       >
         <nav className="container-x flex h-14 items-center justify-between gap-4" aria-label="Primary">
           <Link href="/" className="shrink-0" aria-label="KaamSetu home">
-            <Wordmark />
+            <Wordmark inverted={dark} />
           </Link>
           <ul className="hidden items-center gap-7 md:flex">
             {LINKS.map((l) => (
@@ -85,9 +90,12 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
             </Link>
             <Link
               href="/hire"
-              className="label hidden items-center gap-2 bg-ink px-4 py-2.5 text-paper transition-colors hover:bg-hivis md:inline-flex"
+              className={clsx(
+                'label hidden items-center gap-2 px-4 py-2.5 transition-colors md:inline-flex',
+                dark ? 'bg-hivis text-ink hover:bg-paper' : 'bg-ink text-paper hover:bg-hivis',
+              )}
             >
-              <span className="inline-block size-1.5 rounded-full bg-hivis" /> Post a job
+              <span className={clsx('inline-block size-1.5 rounded-full', dark ? 'bg-ink' : 'bg-hivis')} /> Post a job
             </Link>
           </div>
         </nav>
