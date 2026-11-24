@@ -69,7 +69,7 @@ export interface SpeechResult {
 export interface TtsAdapter {
   readonly name: 'elevenlabs' | 'mock';
   /** fast=true uses the low-latency model (alerts); default uses the quality model. Returns null when unavailable. */
-  speak(text: string, lang: Language, opts?: { fast?: boolean }): Promise<SpeechResult | null>;
+  speak(text: string, lang: Language, opts?: { fast?: boolean; voiceId?: string }): Promise<SpeechResult | null>;
 }
 
 export class MockTts implements TtsAdapter {
@@ -98,8 +98,8 @@ export class ElevenLabsTts implements TtsAdapter {
     private storage: StorageAdapter | null,
   ) {}
 
-  async speak(text: string, lang: Language, opts: { fast?: boolean } = {}): Promise<SpeechResult | null> {
-    const voice = voiceFor(this.env, lang);
+  async speak(text: string, lang: Language, opts: { fast?: boolean; voiceId?: string } = {}): Promise<SpeechResult | null> {
+    const voice = opts.voiceId ?? voiceFor(this.env, lang);
     const model = opts.fast ? this.env.ELEVENLABS_ALERT_MODEL : this.env.ELEVENLABS_TTS_MODEL;
     const key = `tts/${createHash('sha1').update(`${voice}|${model}|${text}`).digest('hex').slice(0, 20)}.mp3`;
 
