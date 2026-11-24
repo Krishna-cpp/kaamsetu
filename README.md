@@ -10,6 +10,9 @@ Workers join with a **Telegram voice note** or a **phone call**. Employers **spe
 
 Devnovate Ideathon 2026 · Track 4 (Mystery Track "UnlockED") · Problem 3 · **Team Meteora**
 
+### 🔗 Live: [main.d1ro3ffmsok6d8.amplifyapp.com](https://main.d1ro3ffmsok6d8.amplifyapp.com)
+[Post a job](https://main.d1ro3ffmsok6d8.amplifyapp.com/hire) · [Worker ID card](https://main.d1ro3ffmsok6d8.amplifyapp.com/w/w_ramesh) · [Live ops](https://main.d1ro3ffmsok6d8.amplifyapp.com/live) · [Architecture](https://main.d1ro3ffmsok6d8.amplifyapp.com/about)
+
 <img src="docs/screenshots/readme/home.png" alt="KaamSetu landing page: 'Kaam milega. Paas mein.' over a live map of Pune" width="100%"/>
 
 </div>

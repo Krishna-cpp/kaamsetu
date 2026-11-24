@@ -36,3 +36,7 @@ apps/web/public/media/
 
 # ElevenLabs voice-design previews
 .voice-previews/
+
+# local QA captures / deploy outputs (curated README shots live in docs/screenshots/readme)
+docs/screenshots/*.png
+docs/.cdk-outputs.json

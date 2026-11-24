@@ -357,6 +357,26 @@ async function run() {
   if (ctx.repo instanceof FileRepo) {
     await ctx.repo.replaceAll(db);
   } else {
+    // Reset: delete every item so test leftovers don't survive a re-seed
+    const { DynamoDBClient } = await import('@aws-sdk/client-dynamodb');
+    const { DynamoDBDocumentClient, ScanCommand, BatchWriteCommand } = await import('@aws-sdk/lib-dynamodb');
+    const doc = DynamoDBDocumentClient.from(new DynamoDBClient({ region: ctx.env.AWS_REGION }));
+    let start: Record<string, unknown> | undefined;
+    let removed = 0;
+    do {
+      const page = await doc.send(new ScanCommand({ TableName: ctx.env.DYNAMO_TABLE, ProjectionExpression: 'PK, SK', ExclusiveStartKey: start }));
+      const keys = (page.Items ?? []) as { PK: string; SK: string }[];
+      for (let i = 0; i < keys.length; i += 25) {
+        await doc.send(
+          new BatchWriteCommand({
+            RequestItems: { [ctx.env.DYNAMO_TABLE]: keys.slice(i, i + 25).map((k) => ({ DeleteRequest: { Key: { PK: k.PK, SK: k.SK } } })) },
+          }),
+        );
+      }
+      removed += keys.length;
+      start = page.LastEvaluatedKey;
+    } while (start);
+    console.log(`Cleared ${removed} items from ${ctx.env.DYNAMO_TABLE}`);
     for (const w of Object.values(db.workers)) await ctx.repo.putWorker(w);
     for (const j of Object.values(db.jobs)) await ctx.repo.putJob(j);
     await ctx.repo.putMatches(Object.values(db.matches));
