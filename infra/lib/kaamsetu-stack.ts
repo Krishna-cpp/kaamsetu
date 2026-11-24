@@ -142,7 +142,9 @@ export class KaamSetuStack extends cdk.Stack {
         ...pick(c, ['NEXT_PUBLIC_ELEVENLABS_AGENT_ID', 'NEXT_PUBLIC_AWS_LOCATION_API_KEY', 'NEXT_PUBLIC_AWS_LOCATION_REGION', 'NEXT_PUBLIC_TELEGRAM_BOT_URL', 'ELEVENLABS_AGENT_ID']),
       };
       delete webEnv.NODE_OPTIONS;
-      const envKeys = Object.keys(webEnv).filter((k) => !k.startsWith('AMPLIFY_'));
+      delete webEnv.PUBLIC_BASE_URL; // set on the branch from Amplify's own domain (below)
+      webEnv.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
+      const envKeys = [...Object.keys(webEnv).filter((k) => !k.startsWith('AMPLIFY_') && !k.startsWith('PLAYWRIGHT_')), 'PUBLIC_BASE_URL'];
       const buildSpec = {
         version: 1,
         applications: [
@@ -150,7 +152,7 @@ export class KaamSetuStack extends cdk.Stack {
             appRoot: 'apps/web',
             frontend: {
               phases: {
-                preBuild: { commands: ['cd ../.. && npm ci && cd apps/web'] },
+                preBuild: { commands: ['nvm install 20 && nvm use 20', 'node -v', 'cd ../.. && npm ci && cd apps/web'] },
                 build: {
                   commands: [
                     // Amplify only exposes env vars at build time; persist the ones SSR needs.
@@ -174,8 +176,18 @@ export class KaamSetuStack extends cdk.Stack {
         buildSpec: JSON.stringify(buildSpec),
         environmentVariables: Object.entries(webEnv).map(([name, value]) => ({ name, value })),
       });
-      const branch = new amplify.CfnBranch(this, 'Main', { appId: app.attrAppId, branchName: 'main', enableAutoBuild: true, framework: 'Next.js - SSR', stage: 'PRODUCTION' });
-      amplifyUrl = `https://${branch.branchName}.${app.attrDefaultDomain}`;
+      amplifyUrl = `https://main.${app.attrDefaultDomain}`;
+      new amplify.CfnBranch(this, 'Main', {
+        appId: app.attrAppId,
+        branchName: 'main',
+        enableAutoBuild: true,
+        framework: 'Next.js - SSR',
+        stage: 'PRODUCTION',
+        environmentVariables: [{ name: 'PUBLIC_BASE_URL', value: amplifyUrl }],
+      });
+      // Bot + agent links (profile URLs) point at the hosted site
+      telegramFn.addEnvironment('PUBLIC_BASE_URL', amplifyUrl);
+      agentFn.addEnvironment('PUBLIC_BASE_URL', amplifyUrl);
       new cdk.CfnOutput(this, 'AmplifyUrl', { value: amplifyUrl });
       new cdk.CfnOutput(this, 'AmplifyAppId', { value: app.attrAppId });
     }
