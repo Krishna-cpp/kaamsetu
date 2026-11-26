@@ -32,7 +32,7 @@ export type PublicWorkerWithPin = PublicWorker & { approxLocation: LatLng };
 
 export interface FeedResponse {
   events: FeedEvent[];
-  stats: { workers: number; jobs: number; openJobs: number; filledJobs: number };
+  stats: { workers: number; jobs: number; openJobs: number; filledJobs: number; benefitsChecksToday?: number };
   now: string;
 }
 

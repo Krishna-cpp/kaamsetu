@@ -14,13 +14,15 @@ export const isWebChat = (chatId: string) => chatId.startsWith(WEBCHAT_PREFIX);
 export interface WebChatMessage {
   id: number;
   from: 'bot' | 'user';
-  kind: 'text' | 'voice';
+  kind: 'text' | 'voice' | 'location';
   /** Telegram-style HTML subset (<b>, <i>) for bot messages; plain text for user messages */
   text: string;
   audioUrl: string | null;
   /** voice-note length in seconds (user voice notes) */
   duration: number | null;
   buttons: ButtonGrid | null;
+  /** kind=location: a place to show on a mini map */
+  location?: { lat: number; lng: number; title: string; address: string } | null;
   at: string;
 }
 
@@ -64,6 +66,10 @@ export class WebChannel implements ChatChannel {
       duration: null,
       buttons: opts.buttons ?? null,
     });
+  }
+
+  async sendLocation(chatId: string, place: { lat: number; lng: number; title: string; address: string }) {
+    await appendWebMessage(this.repo, chatId, { from: 'bot', kind: 'location', text: `${place.title} · ${place.address}`, audioUrl: null, duration: null, buttons: null, location: place });
   }
 
   async sendChatAction() {
@@ -110,6 +116,12 @@ export class RoutingChannel implements ChatChannel {
   }
   async sendChatAction(chatId: string, action: 'typing' | 'record_voice' | 'upload_voice') {
     await this.pick(chatId).sendChatAction?.(chatId, action);
+  }
+  async sendLocation(chatId: string, place: { lat: number; lng: number; title: string; address: string }) {
+    const ch = this.pick(chatId);
+    if (ch.sendLocation) await ch.sendLocation(chatId, place);
+    else await ch.sendText(chatId, `📍 ${place.title}: ${place.address}
+https://maps.google.com/?q=${place.lat},${place.lng}`);
   }
   async answerCallback(callbackId: string, text?: string) {
     // web callbacks use ids prefixed "web:"; everything else is a Telegram callback query

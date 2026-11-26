@@ -93,7 +93,8 @@ export async function registerWorker(ctx: Ctx, input: RegisterInput): Promise<Re
   const geo = await ctx.geo.geocode(extracted.locality!);
   const existing =
     (input.chatId ? await ctx.repo.getWorkerByChat(input.chatId) : null) ??
-    (input.phone ? await ctx.repo.getWorkerByPhone(input.phone) : null);
+    (input.phone ? await ctx.repo.getWorkerByPhone(input.phone) : null) ??
+    (input.chatId ? await claimableSeedWorker(ctx, extracted, geo.locality) : null);
   const now = nowIso();
   const location = existing?.location && existing.locality === geo.locality ? existing.location : jitter(geo.location, Date.now() % 997, 600);
 
@@ -124,6 +125,22 @@ export async function registerWorker(ctx: Ctx, input: RegisterInput): Promise<Re
   await ctx.repo.putWorker(worker);
   if (worker.status === 'active' && existing?.status !== 'active') await announceWorker(ctx, worker);
   return { worker, extracted, missing };
+}
+
+/**
+ * DEMO DATA ONLY: a chat sign-up with exactly the same full name, trade and area as an unclaimed SEED worker
+ * takes over that profile (so the demo's Ramesh keeps his seeded work history). Real workers (any channel other
+ * than 'seed', or already linked to a chat) are never claimable.
+ */
+async function claimableSeedWorker(ctx: Ctx, p: ExtractedProfile, locality: string): Promise<Worker | null> {
+  if (!p.name) return null;
+  const n = (x: string) => x.toLowerCase().normalize('NFC').replace(/s+/g, ' ').trim();
+  const all = await ctx.repo.listWorkers();
+  return (
+    all.find(
+      (w) => w.channel === 'seed' && !w.chatId && n(w.name) === n(p.name!) && n(w.locality) === n(locality) && w.skills.some((k) => p.skills.includes(k)),
+    ) ?? null
+  );
 }
 
 async function announceWorker(ctx: Ctx, w: Worker) {

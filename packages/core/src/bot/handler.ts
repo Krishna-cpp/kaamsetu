@@ -21,6 +21,12 @@ import {
   ensureMatch,
   sendJobAlert,
 } from '../services/workflows';
+import { benefitsOf, ownProfileUrl, saveBenefits } from '../services/benefits';
+import { ruleExtractProfile } from '../extract-rules';
+import { onBenefitsCallback, onBenefitsText, startBenefits, type BenefitsSession, type FlowIO } from '../schemes/flow';
+import { isBenefitsIntent, isStopBenefitsReminders } from '../schemes/keywords';
+import { st } from '../schemes/strings';
+import { speakTo } from './speak';
 
 /* Minimal Telegram types (only what we use) */
 export interface TgUser {
@@ -56,6 +62,8 @@ interface Session {
   pendingTranscript?: string;
   pendingAudioUrl?: string | null;
   lastUpdateId?: number;
+  /** opt-in Scheme Finder state (only set after the worker asked about benefits) */
+  benefits?: BenefitsSession;
 }
 
 const DELETE_RE = /(delete my data|\/delete|डेटा हटा|डेटा मिटा|डेटा काढ|data hatao|data delete)/i;
@@ -68,19 +76,17 @@ async function saveSession(ctx: Ctx, chatId: string, s: Session) {
 }
 
 /** Speak + show: voice note with the same text as caption (helps low-literacy users follow along). */
-async function say(ctx: Ctx, chatId: string, lang: Language, text: string, buttons?: ButtonGrid, extra?: string) {
-  const caption = extra ? `${text}\n\n${extra}` : text;
-  try {
-    await ctx.channel.sendChatAction?.(chatId, 'record_voice');
-    const speech = await ctx.tts.speak(text, lang);
-    if (speech) {
-      await ctx.channel.sendVoice(chatId, speech.audio, { caption, buttons });
-      return;
-    }
-  } catch (e) {
-    console.warn('[bot] TTS failed, falling back to text:', (e as Error).message);
-  }
-  await ctx.channel.sendText(chatId, caption, buttons);
+function say(ctx: Ctx, chatId: string, lang: Language, text: string, buttons?: ButtonGrid, extra?: string) {
+  return speakTo(ctx, chatId, lang, text, buttons, extra);
+}
+
+/** Channel I/O for the Scheme Finder flow. */
+function flowIO(ctx: Ctx, chatId: string, lang: Language): FlowIO {
+  return {
+    say: (text, buttons, extra) => say(ctx, chatId, lang, text, buttons, extra),
+    text: (text, buttons) => ctx.channel.sendText(chatId, text, buttons),
+    location: ctx.channel.sendLocation ? (p) => ctx.channel.sendLocation!(chatId, p) : undefined,
+  };
 }
 
 const langButtons = (): ButtonGrid => [LANGUAGE_CODES.map((l) => ({ text: LANGUAGES[l].nativeName, data: `lang|${l}` }))];
@@ -140,6 +146,22 @@ async function onMessage(ctx: Ctx, chatId: string, s: Session, msg: TgMessage) {
     if (!w || w.status !== 'active') return say(ctx, chatId, lang, t('askIntro', lang));
     return offerNearbyJobs(ctx, w.id, true);
   }
+  if (ctx.env.FEATURE_SCHEMES) {
+    if (isStopBenefitsReminders(text)) {
+      const w = await ctx.repo.getWorkerByChat(chatId);
+      const l = w?.language ?? lang;
+      if (w) await saveBenefits(ctx, w, { reminders: false });
+      await ctx.channel.sendText(chatId, st('remindersOff', l));
+      return;
+    }
+    if (text === '/benefits') {
+      const w = await ctx.repo.getWorkerByChat(chatId);
+      const l = s.lang ?? w?.language ?? lang;
+      await startBenefits(ctx, w, l, s, flowIO(ctx, chatId, l));
+      await saveSession(ctx, chatId, s);
+      return;
+    }
+  }
 
   // Voice note (or typed intro) → profile
   const media = msg.voice ?? msg.audio;
@@ -175,6 +197,23 @@ async function onMessage(ctx: Ctx, chatId: string, s: Session, msg: TgMessage) {
   if (!transcript || transcript.startsWith('/')) {
     await say(ctx, chatId, lang, t('askIntro', lang));
     return;
+  }
+
+  // Scheme Finder (opt-in): only when the worker is answering a question they agreed to, or asked about benefits
+  if (ctx.env.FEATURE_SCHEMES) {
+    const w = await ctx.repo.getWorkerByChat(chatId);
+    const l = s.lang ?? w?.language ?? lang;
+    if (s.benefits?.step && (await onBenefitsText(ctx, w, l, s, transcript, flowIO(ctx, chatId, l)))) {
+      await saveSession(ctx, chatId, s);
+      return;
+    }
+    // a registration intro that happens to mention a scheme word still registers (it names a trade)
+    const isIntro = w?.status !== 'active' && ruleExtractProfile(transcript).skills.length > 0;
+    if (isBenefitsIntent(transcript) && !isIntro) {
+      await startBenefits(ctx, w, l, s, flowIO(ctx, chatId, l));
+      await saveSession(ctx, chatId, s);
+      return;
+    }
   }
 
   const replyLang: Language = s.lang ?? detected ?? detectLanguage(transcript, lang);
@@ -238,6 +277,15 @@ async function onCallback(ctx: Ctx, chatId: string, s: Session, cb: TgCallback) 
   await ctx.channel.answerCallback?.(cb.id);
 
   switch (kind) {
+    case 'ben': {
+      if (!ctx.env.FEATURE_SCHEMES) return;
+      const w = await ctx.repo.getWorkerByChat(chatId);
+      const l = s.lang ?? w?.language ?? lang;
+      if (cb.message && (a === 'start' || a === 'later' || a === 'ans' || a === 'skip')) await ctx.channel.clearButtons?.(chatId, cb.message.message_id);
+      await onBenefitsCallback(ctx, w, l, s, (cb.data ?? '').split('|'), flowIO(ctx, chatId, l));
+      await saveSession(ctx, chatId, s);
+      return;
+    }
     case 'lang': {
       if (!isLanguage(a)) return;
       s.lang = a;
@@ -264,7 +312,12 @@ async function onCallback(ctx: Ctx, chatId: string, s: Session, cb: TgCallback) 
       if (a === 'ok' && b) {
         const w = await activateWorker(ctx, b);
         if (!w) return;
-        await say(ctx, chatId, lang, t('profileSaved', lang), [[{ text: '🪪 KaamSetu ID', url: `${ctx.env.PUBLIC_BASE_URL}/w/${w.id}` }]]);
+        // Scheme Finder: ONE extra line in the same voice message, once per worker. No question, no follow-up.
+        const showTip = ctx.env.FEATURE_SCHEMES && !benefitsOf(w).tipShown;
+        const saved = showTip ? `${t('profileSaved', lang)} ${st('tip', lang)}` : t('profileSaved', lang);
+        if (showTip) await saveBenefits(ctx, w, { tipShown: true });
+        const idUrl = ctx.env.FEATURE_SCHEMES ? ownProfileUrl(ctx, w.id) : `${ctx.env.PUBLIC_BASE_URL}/w/${w.id}`;
+        await say(ctx, chatId, lang, saved, [[{ text: '🪪 KaamSetu ID', url: idUrl }]]);
         await offerNearbyJobs(ctx, w.id, false);
       } else {
         await say(ctx, chatId, lang, t('fixProfile', lang));

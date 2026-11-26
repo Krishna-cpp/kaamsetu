@@ -47,6 +47,7 @@ async function main() {
       { command: 'jobs', description: 'Work near me / पास में काम' },
       { command: 'profile', description: 'My KaamSetu ID' },
       { command: 'lang', description: 'Change language / भाषा' },
+      ...(ctx.env.FEATURE_SCHEMES ? [{ command: 'benefits', description: 'My benefits / मेरी योजनाएँ' }] : []),
       { command: 'delete', description: 'Delete my data / मेरा डेटा हटाओ' },
     ],
   }));

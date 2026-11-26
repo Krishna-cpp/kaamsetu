@@ -17,6 +17,8 @@ export interface ChatChannel {
   sendText(chatId: string, text: string, buttons?: ButtonGrid): Promise<void>;
   sendVoice(chatId: string, audio: Uint8Array, opts?: { caption?: string; buttons?: ButtonGrid; mimeType?: string }): Promise<void>;
   sendChatAction?(chatId: string, action: 'typing' | 'record_voice' | 'upload_voice'): Promise<void>;
+  /** A place on a map (Telegram: native venue card; web chat: mini map). */
+  sendLocation?(chatId: string, place: { lat: number; lng: number; title: string; address: string }): Promise<void>;
   answerCallback?(callbackId: string, text?: string): Promise<void>;
   clearButtons?(chatId: string, messageId: number): Promise<void>;
   downloadFile?(fileId: string): Promise<{ data: Uint8Array; path: string }>;
@@ -24,14 +26,17 @@ export interface ChatChannel {
 
 export class MockChannel implements ChatChannel {
   readonly name = 'mock' as const;
-  readonly sent: { chatId: string; kind: 'text' | 'voice'; text: string }[] = [];
-  async sendText(chatId: string, text: string) {
-    this.sent.push({ chatId, kind: 'text', text });
+  readonly sent: { chatId: string; kind: 'text' | 'voice' | 'location'; text: string; buttons?: ButtonGrid }[] = [];
+  async sendText(chatId: string, text: string, buttons?: ButtonGrid) {
+    this.sent.push({ chatId, kind: 'text', text, buttons });
     console.info(`[mock-channel] → ${chatId}: ${text}`);
   }
-  async sendVoice(chatId: string, _audio: Uint8Array, opts?: { caption?: string }) {
-    this.sent.push({ chatId, kind: 'voice', text: opts?.caption ?? '' });
+  async sendVoice(chatId: string, _audio: Uint8Array, opts?: { caption?: string; buttons?: ButtonGrid }) {
+    this.sent.push({ chatId, kind: 'voice', text: opts?.caption ?? '', buttons: opts?.buttons });
     console.info(`[mock-channel] 🔊 → ${chatId}: ${opts?.caption ?? ''}`);
+  }
+  async sendLocation(chatId: string, place: { lat: number; lng: number; title: string; address: string }) {
+    this.sent.push({ chatId, kind: 'location', text: `${place.title} · ${place.address}` });
   }
 }
 
@@ -85,6 +90,10 @@ export class TelegramChannel implements ChatChannel {
 
   async sendChatAction(chatId: string, action: 'typing' | 'record_voice' | 'upload_voice') {
     await this.call('sendChatAction', { chat_id: chatId, action }).catch(() => undefined);
+  }
+
+  async sendLocation(chatId: string, place: { lat: number; lng: number; title: string; address: string }) {
+    await this.call('sendVenue', { chat_id: chatId, latitude: place.lat, longitude: place.lng, title: place.title, address: place.address });
   }
 
   async answerCallback(callbackId: string, text?: string) {

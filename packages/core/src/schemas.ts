@@ -53,6 +53,33 @@ export type WorkerStats = z.infer<typeof WorkerStatsSchema>;
 export const ChannelKindSchema = z.enum(['telegram', 'whatsapp', 'voice_agent', 'web', 'seed']);
 export type ChannelKind = z.infer<typeof ChannelKindSchema>;
 
+/**
+ * Scheme Finder answers (opt-in). PRIVACY: only age, yes/no answers and an income band are ever stored.
+ * Never Aadhaar, bank account numbers or documents.
+ */
+export const BenefitsProfileSchema = z.object({
+  optIn: z.boolean().default(false),
+  /** false after the worker replies STOP BENEFITS */
+  reminders: z.boolean().default(true),
+  tipShown: z.boolean().default(false),
+  /** exact age if the worker said a number; otherwise an inclusive band */
+  age: z.number().int().min(10).max(100).nullable().default(null),
+  ageBand: z.object({ min: z.number().int(), max: z.number().int() }).nullable().default(null),
+  hasBankAccount: z.boolean().nullable().default(null),
+  /** EPFO / ESIC deducted from pay */
+  pfDeducted: z.boolean().nullable().default(null),
+  paysIncomeTax: z.boolean().nullable().default(null),
+  monthlyIncomeBand: z.enum(['upto_15000', 'above_15000']).nullable().default(null),
+  /** schemeId → ISO date the worker said they applied/enrolled */
+  applied: z.record(z.string()).default({}),
+  /** schemeId → ISO date of the last renewal reminder */
+  lastReminder: z.record(z.string()).default({}),
+  /** set when the 90-day construction alert was sent */
+  bocw90AlertAt: z.string().nullable().default(null),
+  updatedAt: z.string().nullable().default(null),
+});
+export type BenefitsProfile = z.infer<typeof BenefitsProfileSchema>;
+
 export const WorkerSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(80),
@@ -77,6 +104,8 @@ export const WorkerSchema = z.object({
   introTranscript: z.string().max(1000).nullable(),
   introAudioUrl: z.string().nullable(),
   consentAt: isoDateTime.nullable(),
+  /** optional: absent on workers created before the Scheme Finder existed */
+  benefits: BenefitsProfileSchema.optional(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,
 });
@@ -142,6 +171,10 @@ export const MatchSchema = z.object({
   viewedAt: isoDateTime.nullable(),
   respondedAt: isoDateTime.nullable(),
   /** Demo simulation for seed workers who have no real chat: statuses advance lazily on read. */
+  /** employer marked the job done (counts towards construction work days) */
+  completedAt: isoDateTime.nullable().optional(),
+  /** employer confirmed this worker did the job (work record tick) */
+  employerConfirmed: z.boolean().optional(),
   sim: z
     .object({
       viewAt: isoDateTime,
@@ -172,6 +205,8 @@ export const EventTypeSchema = z.enum([
   'match_accepted',
   'match_declined',
   'rating_added',
+  'job_completed',
+  'benefits_checked',
 ]);
 export type EventType = z.infer<typeof EventTypeSchema>;
 

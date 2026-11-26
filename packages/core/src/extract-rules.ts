@@ -19,6 +19,7 @@ const MR_MARKERS = ['आहे', 'माझं', 'माझे', 'माझा',
 const HI_MARKERS = ['है', 'हूँ', 'हूं', 'मेरा', 'मैं', 'चाहिए', 'रहता', 'दिन', 'कल', 'रुपये', 'रुपए', 'hai', 'hoon', 'hun', 'mera', 'main ', 'chahiye', 'rehta', 'rahta', 'din', 'kal', 'rupaye', 'rupees', 'roz'];
 
 export function detectLanguage(text: string, hint?: Language | null): Language {
+  if (/[ಀ-೿]/.test(text)) return 'kn';
   const t = ' ' + text.toLowerCase() + ' ';
   const mr = MR_MARKERS.filter((m) => t.includes(m)).length;
   const hi = HI_MARKERS.filter((m) => t.includes(m)).length;
@@ -116,6 +117,7 @@ const NAME_PATTERNS: RegExp[] = [
   /मेरा\s+नाम\s+([ऀ-ॿ]+(?:\s+[ऀ-ॿ]+)?)\s+है/,
   /(?:maza|majha|maaza|maajha|maz|majh)\w*\s+(?:nav|naav|naw)\s+([a-z]+(?:\s+[a-z]+)?)\s+(?:aahe|ahe|aah)/i,
   /(?:माझं|माझे|माझा)\s+नाव\s+([ऀ-ॿ]+(?:\s+[ऀ-ॿ]+)?)\s+आहे/,
+  /ನನ್ನ\s+ಹೆಸರು\s+([ಀ-೿]+(?:\s+[ಀ-೿]+)?)(?=\s|[,.]|$)/,
   /(?:my name is|i am|i'm|this is)\s+([a-z]+(?:\s+[a-z]+)?)(?=[\s,.]|$)/i,
   /(?:main|mai|मैं|मी)\s+([A-Zऀ-ॿ][a-zऀ-ॿ]+)\s+(?:hoon|hun|हूँ|हूं|आहे)/,
 ];

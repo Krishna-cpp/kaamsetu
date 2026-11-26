@@ -5,7 +5,7 @@ import { route } from '@/lib/route';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const TOOLS: ToolName[] = ['register_worker', 'find_jobs_near_me', 'accept_job'];
+const TOOLS: ToolName[] = ['register_worker', 'find_jobs_near_me', 'accept_job', 'check_benefits'];
 
 /** Server tools for the ElevenLabs "Kaam Didi" agent. Auth: x-kaamsetu-secret header. */
 export const POST = route(async (req: Request, { params }: { params: Promise<{ tool: string }> }) => {

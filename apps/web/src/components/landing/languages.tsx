@@ -10,7 +10,7 @@ import { SpotCard } from './interactions';
 import { Waveform } from './waveform';
 
 const ORDER: Language[] = ['hi', 'mr', 'en'];
-const SEEDS: Record<Language, number> = { hi: 5, mr: 13, en: 21 };
+const SEEDS: Record<Language, number> = { hi: 5, mr: 13, en: 21, kn: 29 };
 
 export function LanguageShowcase() {
   const [today, tomorrow] = useMemo(() => [istDate(0), istDate(1)], []);

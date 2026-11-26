@@ -2,7 +2,7 @@
 
 import clsx from 'clsx';
 import { animate, AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { BriefcaseBusiness, Handshake, Headphones, Radio, Star, UserPlus, X, Zap, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, BriefcaseBusiness, Handshake, Headphones, Landmark, Radio, Star, UserPlus, X, Zap, type LucideIcon } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PUNE_LOCALITIES, SKILL_CODES, type EventType, type FeedEvent, type Job, type Skill } from '@kaamsetu/core';
 import { api, type FeedResponse, type PublicWorkerWithPin } from '@/lib/api';
@@ -19,6 +19,8 @@ const META: Record<EventType, { icon: LucideIcon; label: string; color: string; 
   match_accepted: { icon: Handshake, label: 'Hired', color: '#FF5B14', tone: 'hivis' },
   match_declined: { icon: X, label: 'Declined', color: '#5F5D58', tone: 'paper' },
   rating_added: { icon: Star, label: 'Rated', color: '#FFD23F', tone: 'signal' },
+  job_completed: { icon: BadgeCheck, label: 'Job done', color: '#F3EFE6', tone: 'paper' },
+  benefits_checked: { icon: Landmark, label: 'Benefits check', color: '#FFD23F', tone: 'signal' },
 };
 
 const istDay = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });

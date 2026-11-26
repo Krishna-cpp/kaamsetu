@@ -35,21 +35,21 @@ export class RuleLlm implements LlmAdapter {
 const COMMON_RULES = `
 Rules:
 - Output ONLY a single JSON object. No markdown, no code fences, no commentary.
-- Input may be Hindi, Marathi or English, in Devanagari or romanised script, and may be an imperfect speech transcript.
+- Input may be Hindi, Marathi, Kannada or English, in Devanagari, Kannada or romanised script, and may be an imperfect speech transcript.
 - "skills"/"skill" must use ONLY these codes: ${SKILL_CODES.join(', ')}. Map synonyms (e.g. "rajmistri"/"गवंडी" → mason, "nal ka kaam" → plumber, "majdoor"/"हमाल" → helper).
 - "locality" must be one of these Pune areas when one is mentioned (use the English spelling): ${PUNE_LOCALITIES.map((l) => l.name).join(', ')}. Otherwise the place name as heard, or null.
 - Convert spoken numbers to integers ("aath sau" → 800, "पाचशे" → 500, "डेढ़ हजार" → 1500). Wages are INR per day.
-- "language": hi, mr or en — the language the speaker mainly used.
+- "language": hi, mr, kn or en — the language the speaker mainly used.
 - Use null for anything not stated. Never invent values.`;
 
 const PROFILE_PROMPT = `You extract a worker profile from a voice-note transcript for KaamSetu, a job platform for informal workers in India.
 Return JSON with exactly these keys:
-{"name": string|null, "skills": string[], "experienceYears": integer|null, "locality": string|null, "expectedWage": integer|null, "availability": "available"|"busy"|null, "availableFrom": "YYYY-MM-DD"|null, "language": "hi"|"mr"|"en"}
+{"name": string|null, "skills": string[], "experienceYears": integer|null, "locality": string|null, "expectedWage": integer|null, "availability": "available"|"busy"|null, "availableFrom": "YYYY-MM-DD"|null, "language": "hi"|"mr"|"en"|"kn"}
 ${COMMON_RULES}`;
 
 const JOB_PROMPT = (today: string) => `You extract a job posting from an employer's voice transcript for KaamSetu, a hyper-local job platform in Pune, India. Today is ${today} (Asia/Kolkata).
 Return JSON with exactly these keys:
-{"skill": string|null, "workersNeeded": integer|null, "durationDays": integer|null, "wagePerDay": integer|null, "locality": string|null, "startDate": "YYYY-MM-DD"|null, "description": string|null, "language": "hi"|"mr"|"en"}
+{"skill": string|null, "workersNeeded": integer|null, "durationDays": integer|null, "wagePerDay": integer|null, "locality": string|null, "startDate": "YYYY-MM-DD"|null, "description": string|null, "language": "hi"|"mr"|"en"|"kn"}
 - Resolve relative dates ("tomorrow", "kal", "उद्या", "parso") against today.
 - "description": one short English sentence summarising the work.
 ${COMMON_RULES}`;

@@ -30,6 +30,28 @@ export const PUNE_LOCALITIES: Locality[] = [
   { name: 'Magarpatta', aliases: ['magarpatta', 'मगरपट्टा'], lat: 18.5149, lng: 73.9271 },
 ];
 
+/** Bengaluru neighbourhoods (approx. centroids): Karnataka BOCW + help centres. Kept separate so the Pune map projection is unchanged. */
+export const BENGALURU_LOCALITIES: Locality[] = [
+  { name: 'Jayanagar', aliases: ['jayanagar', 'ಜಯನಗರ'], lat: 12.925, lng: 77.5938 },
+  { name: 'Rajajinagar', aliases: ['rajajinagar', 'ರಾಜಾಜಿನಗರ'], lat: 12.9915, lng: 77.5543 },
+  { name: 'Yeshwanthpur', aliases: ['yeshwanthpur', 'yeshwantpur', 'ಯಶವಂತಪುರ'], lat: 13.0285, lng: 77.5401 },
+  { name: 'Whitefield', aliases: ['whitefield', 'ವೈಟ್‌ಫೀಲ್ಡ್'], lat: 12.9698, lng: 77.75 },
+  { name: 'Electronic City', aliases: ['electronic city', 'ಎಲೆಕ್ಟ್ರಾನಿಕ್ ಸಿಟಿ'], lat: 12.8452, lng: 77.6602 },
+  { name: 'K R Puram', aliases: ['k r puram', 'kr puram', 'ಕೆ ಆರ್ ಪುರಂ'], lat: 13.0077, lng: 77.6958 },
+  { name: 'Marathahalli', aliases: ['marathahalli', 'ಮಾರತಹಳ್ಳಿ'], lat: 12.9591, lng: 77.6974 },
+  { name: 'Peenya', aliases: ['peenya', 'ಪೀಣ್ಯ'], lat: 13.0285, lng: 77.5197 },
+  { name: 'Banashankari', aliases: ['banashankari', 'ಬನಶಂಕರಿ'], lat: 12.9255, lng: 77.5468 },
+  { name: 'Hebbal', aliases: ['hebbal', 'ಹೆಬ್ಬಾಳ'], lat: 13.0358, lng: 77.597 },
+];
+const ALL_LOCALITIES = [...PUNE_LOCALITIES, ...BENGALURU_LOCALITIES];
+
+export type IndianState = 'MH' | 'KA';
+/** State for a locality name (defaults to Maharashtra: our home city is Pune). */
+export function stateOfLocality(name: string): IndianState {
+  const n = name.toLowerCase().trim();
+  return BENGALURU_LOCALITIES.some((l) => l.name.toLowerCase() === n || l.aliases.includes(n)) || /bengaluru|bangalore|ಬೆಂಗಳೂರು/.test(n) ? 'KA' : 'MH';
+}
+
 export const PUNE_CENTER = { lat: 18.5204, lng: 73.8567 } as const;
 
 export const SEED_LOCALITIES = [
@@ -53,7 +75,7 @@ function norm(s: string): string {
 export function findLocalityInText(text: string): Locality | null {
   const t = norm(text);
   let best: { loc: Locality; len: number } | null = null;
-  for (const loc of PUNE_LOCALITIES) {
+  for (const loc of ALL_LOCALITIES) {
     for (const a of loc.aliases) {
       if (t.includes(a) && (!best || a.length > best.len)) best = { loc, len: a.length };
     }
@@ -63,12 +85,13 @@ export function findLocalityInText(text: string): Locality | null {
 
 export function getLocality(name: string): Locality | null {
   const n = norm(name);
-  return PUNE_LOCALITIES.find((l) => norm(l.name) === n || l.aliases.includes(n)) ?? findLocalityInText(n);
+  return ALL_LOCALITIES.find((l) => norm(l.name) === n || l.aliases.includes(n)) ?? findLocalityInText(n);
 }
 
 /** Locality name in the speaker's script (Devanagari for hi/mr) so TTS pronounces it natively. */
 export function localityLabel(name: string, lang: 'hi' | 'mr' | 'en' | string): string {
   if (lang === 'en') return name;
   const loc = getLocality(name);
-  return loc?.aliases.find((a) => /[ऀ-ॿ]/.test(a)) ?? name;
+  const script = lang === 'kn' ? /[ಀ-೿]/ : /[ऀ-ॿ]/;
+  return loc?.aliases.find((a) => script.test(a)) ?? name;
 }

@@ -70,6 +70,8 @@ export interface TtsAdapter {
   readonly name: 'elevenlabs' | 'mock';
   /** fast=true uses the low-latency model (alerts); default uses the quality model. Returns null when unavailable. */
   speak(text: string, lang: Language, opts?: { fast?: boolean; voiceId?: string }): Promise<SpeechResult | null>;
+  /** Only return audio that is already cached (never spends TTS credits). */
+  cached?(text: string, lang: Language, opts?: { fast?: boolean }): Promise<SpeechResult | null>;
 }
 
 export class MockTts implements TtsAdapter {
@@ -87,6 +89,7 @@ export function voiceFor(env: Env, lang: Language): string {
     hi: env.ELEVENLABS_VOICE_ID_HI,
     mr: env.ELEVENLABS_VOICE_ID_MR ?? env.ELEVENLABS_VOICE_ID_HI,
     en: env.ELEVENLABS_VOICE_ID_EN ?? env.ELEVENLABS_VOICE_ID_HI,
+    kn: env.ELEVENLABS_VOICE_ID_EN ?? env.ELEVENLABS_VOICE_ID_HI,
   };
   return map[lang] ?? DEFAULT_VOICE;
 }
@@ -98,10 +101,21 @@ export class ElevenLabsTts implements TtsAdapter {
     private storage: StorageAdapter | null,
   ) {}
 
-  async speak(text: string, lang: Language, opts: { fast?: boolean; voiceId?: string } = {}): Promise<SpeechResult | null> {
+  private key(text: string, lang: Language, opts: { fast?: boolean; voiceId?: string }) {
     const voice = opts.voiceId ?? voiceFor(this.env, lang);
     const model = opts.fast ? this.env.ELEVENLABS_ALERT_MODEL : this.env.ELEVENLABS_TTS_MODEL;
-    const key = `tts/${createHash('sha1').update(`${voice}|${model}|${text}`).digest('hex').slice(0, 20)}.mp3`;
+    return { voice, model, key: `tts/${createHash('sha1').update(`${voice}|${model}|${text}`).digest('hex').slice(0, 20)}.mp3` };
+  }
+
+  async cached(text: string, lang: Language, opts: { fast?: boolean } = {}): Promise<SpeechResult | null> {
+    if (!this.storage) return null;
+    const { key } = this.key(text, lang, opts);
+    const hit = await this.storage.get(key).catch(() => null);
+    return hit ? { audio: hit, mimeType: 'audio/mpeg', url: this.storage.publicUrl(key) } : null;
+  }
+
+  async speak(text: string, lang: Language, opts: { fast?: boolean; voiceId?: string } = {}): Promise<SpeechResult | null> {
+    const { voice, model, key } = this.key(text, lang, opts);
 
     if (this.storage) {
       const hit = await this.storage.get(key).catch(() => null);

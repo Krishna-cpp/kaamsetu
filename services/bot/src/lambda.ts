@@ -3,7 +3,7 @@
  *   POST /telegram        → Telegram webhook
  *   POST /agent/{tool}    → ElevenLabs Conversational AI server tools
  */
-import { getCtx, handleUpdate, runAgentTool, type TgUpdate, type ToolName } from '@kaamsetu/core/server';
+import { getCtx, handleUpdate, runAgentTool, runBenefitReminders, type TgUpdate, type ToolName } from '@kaamsetu/core/server';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 
 const json = (statusCode: number, body: unknown): APIGatewayProxyResultV2 => ({
@@ -75,6 +75,7 @@ export async function telegramSetup(event: APIGatewayProxyEventV2): Promise<APIG
       { command: 'jobs', description: 'Work near me / पास में काम' },
       { command: 'profile', description: 'My KaamSetu ID' },
       { command: 'lang', description: 'Change language / भाषा' },
+      ...(ctx.env.FEATURE_SCHEMES ? [{ command: 'benefits', description: 'My benefits / मेरी योजनाएँ' }] : []),
       { command: 'delete', description: 'Delete my data / मेरा डेटा हटाओ' },
     ],
   });
@@ -82,7 +83,7 @@ export async function telegramSetup(event: APIGatewayProxyEventV2): Promise<APIG
   return json(200, { url, probe, me, webhook, commands, info });
 }
 
-const TOOLS: ToolName[] = ['register_worker', 'find_jobs_near_me', 'accept_job'];
+const TOOLS: ToolName[] = ['register_worker', 'find_jobs_near_me', 'accept_job', 'check_benefits'];
 
 export async function agentTool(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   const ctx = getCtx();
@@ -96,4 +97,11 @@ export async function agentTool(event: APIGatewayProxyEventV2): Promise<APIGatew
     console.error('[agent-tool]', tool, e);
     return json(200, { ok: false, message: 'Something went wrong. Please try again.' });
   }
+}
+
+/** EventBridge Scheduler (daily): renewal reminders for workers who opted in to the Scheme Finder. */
+export async function benefitsReminders(): Promise<{ checked: number; sent: number }> {
+  const res = await runBenefitReminders(getCtx());
+  console.log('[benefits-reminders]', JSON.stringify(res));
+  return res;
 }

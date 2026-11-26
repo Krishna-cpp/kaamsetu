@@ -41,6 +41,10 @@ const EnvSchema = z.object({
   PUBLIC_BASE_URL: z.string().default('http://localhost:3000'),
   /** Seconds for simulated seed-worker responses in the demo. */
   SIM_SPEED: z.coerce.number().default(1),
+  /** Scheme Finder ("My Benefits"), opt-in. Off unless explicitly enabled. */
+  FEATURE_SCHEMES: bool,
+  /** HMAC secret for private work-record links (falls back to AGENT_TOOL_SECRET) */
+  WORK_RECORD_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -100,5 +104,6 @@ export function integrationStatus(env = getEnv()) {
     store: env.STORE,
     telegram: !env.DEMO_MODE && env.TELEGRAM_BOT_TOKEN ? 'telegram' : 'mock',
     agent: env.ELEVENLABS_AGENT_ID ? 'elevenlabs' : 'none',
+    schemes: env.FEATURE_SCHEMES,
   } as const;
 }

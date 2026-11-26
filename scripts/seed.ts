@@ -118,6 +118,7 @@ const INTROS: Record<Language, (n: string, s: string, l: string, w: number, y: n
   hi: (n, s, l, w, y) => `मेरा नाम ${n} है। मैं ${s} का काम करता हूँ, ${y} साल का अनुभव है। ${l} में रहता हूँ। ${w} रुपये रोज़ चाहिए।`,
   mr: (n, s, l, w, y) => `माझं नाव ${n} आहे. मी ${s} आहे, ${y} वर्षांचा अनुभव आहे. ${l} मध्ये राहतो. रोज ${w} रुपये हवेत.`,
   en: (n, s, l, w, y) => `I'm ${n}, a ${s.toLowerCase()} with ${y} years of experience, based in ${l}. I charge ₹${w} a day.`,
+  kn: (n, s, l, w, y) => `ನನ್ನ ಹೆಸರು ${n}. ನಾನು ${s}, ${y} ವರ್ಷದ ಅನುಭವ. ${l} ನಲ್ಲಿ ಇದ್ದೇನೆ. ದಿನಕ್ಕೆ ${w} ರೂಪಾಯಿ ಬೇಕು.`,
 };
 
 const REVIEWS = [
@@ -328,6 +329,115 @@ function main() {
       });
     }
   });
+
+  // ── Scheme Finder demo: Ramesh's completed construction work (88 days in the last 12 months) ──
+  // Ten past jobs he did through KaamSetu, marked done by the employer. One more 3-day job (JOB #0410,
+  // accepted, not yet marked done) takes him past the 90-day BOCW requirement during the demo.
+  const ramesh = db.workers['w_ramesh']!;
+  const HISTORY: { days: number; ago: number; loc: string; emp: number; skill: Skill; confirmed: boolean }[] = [
+    { days: 10, ago: 330, loc: 'Kothrud', emp: 5, skill: 'plumber', confirmed: true },
+    { days: 8, ago: 300, loc: 'Warje', emp: 3, skill: 'plumber', confirmed: true },
+    { days: 12, ago: 265, loc: 'Kothrud', emp: 5, skill: 'plumber', confirmed: true },
+    { days: 6, ago: 230, loc: 'Bavdhan', emp: 1, skill: 'plumber', confirmed: false },
+    { days: 9, ago: 195, loc: 'Deccan', emp: 3, skill: 'plumber', confirmed: true },
+    { days: 7, ago: 160, loc: 'Kothrud', emp: 6, skill: 'helper', confirmed: true },
+    { days: 11, ago: 120, loc: 'Sinhagad Road', emp: 5, skill: 'plumber', confirmed: true },
+    { days: 8, ago: 85, loc: 'Kothrud', emp: 3, skill: 'plumber', confirmed: false },
+    { days: 10, ago: 50, loc: 'Warje', emp: 5, skill: 'plumber', confirmed: true },
+    { days: 7, ago: 20, loc: 'Kothrud', emp: 6, skill: 'plumber', confirmed: true },
+  ];
+  HISTORY.forEach((h, k) => {
+    const loc = getLocality(h.loc)!;
+    const createdAt = iso((h.ago + h.days + 2) * 1440);
+    const job: Job = {
+      id: `j_hist${String(k).padStart(3, '0')}`,
+      code: String(200 + k * 3).padStart(4, '0'),
+      skill: h.skill,
+      workersNeeded: 1,
+      durationDays: h.days,
+      wagePerDay: 750 + (k % 3) * 50,
+      startDate: new Date(Date.now() - (h.ago + h.days) * 86_400_000).toISOString().slice(0, 10),
+      locality: loc.name,
+      location: { lat: loc.lat, lng: loc.lng },
+      geohash: geohashEncode(loc.lat, loc.lng, 6),
+      radiusKm: 8,
+      description: 'Plumbing and fitting work on a building site.',
+      employer: EMPLOYERS[h.emp]!,
+      language: 'en',
+      source: 'form',
+      transcript: null,
+      status: 'closed',
+      flags: [],
+      createdAt,
+    };
+    db.jobs[job.id] = job;
+    const m: Match = {
+      id: matchId(job.id, ramesh.id),
+      jobId: job.id,
+      workerId: ramesh.id,
+      rank: 1,
+      score: 90,
+      breakdown: { skill: 1, proximity: 0.9, wage: 1, trust: 0.85, availability: 1 },
+      distanceKm: 1.2,
+      why: 'Plumber · nearby · past KaamSetu job',
+      status: 'accepted',
+      alertedAt: createdAt,
+      viewedAt: createdAt,
+      respondedAt: createdAt,
+      completedAt: iso(h.ago * 1440),
+      employerConfirmed: h.confirmed,
+      sim: null,
+      createdAt,
+    };
+    db.matches[m.id] = m;
+  });
+
+  // The demo job: accepted by Ramesh, waiting for the employer to tap "Mark job done" on /hire
+  {
+    const loc = getLocality('Kothrud')!;
+    const createdAt = iso(26 * 60);
+    const job: Job = {
+      id: 'j_demo_bocw',
+      code: '0410',
+      skill: 'plumber',
+      workersNeeded: 1,
+      durationDays: 3,
+      wagePerDay: 850,
+      startDate: addDays(todayIST(), -3),
+      locality: loc.name,
+      location: jitter({ lat: loc.lat, lng: loc.lng }, 777, 400),
+      geohash: geohashEncode(loc.lat, loc.lng, 6),
+      radiusKm: 8,
+      description: 'Bathroom pipeline replacement in a new building (3 days).',
+      employer: EMPLOYERS[5]!,
+      language: 'en',
+      source: 'form',
+      transcript: null,
+      status: 'filled',
+      flags: [],
+      createdAt,
+    };
+    db.jobs[job.id] = job;
+    const m: Match = {
+      id: matchId(job.id, ramesh.id),
+      jobId: job.id,
+      workerId: ramesh.id,
+      rank: 1,
+      score: 93,
+      breakdown: { skill: 1, proximity: 0.95, wage: 1, trust: 0.83, availability: 1 },
+      distanceKm: 0.8,
+      why: 'Plumber · 800 m away · asks ₹800 (you offer ₹850) · 4.8★ from 12 jobs',
+      status: 'accepted',
+      alertedAt: createdAt,
+      viewedAt: createdAt,
+      respondedAt: createdAt,
+      completedAt: null,
+      employerConfirmed: false,
+      sim: null,
+      createdAt,
+    };
+    db.matches[m.id] = m;
+  }
 
   // Ratings history (matches worker stats roughly)
   const ratings: Rating[] = [];

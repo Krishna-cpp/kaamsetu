@@ -3,7 +3,7 @@
  * + its strings in i18n.ts. Everything else (schemas, bot menus, TTS voice
  * selection, landing showcase) is driven from this list.
  */
-export const LANGUAGE_CODES = ['hi', 'mr', 'en'] as const;
+export const LANGUAGE_CODES = ['hi', 'mr', 'en', 'kn'] as const;
 export type Language = (typeof LANGUAGE_CODES)[number];
 
 export interface LanguageConfig {
@@ -23,6 +23,7 @@ export const LANGUAGES: Record<Language, LanguageConfig> = {
   hi: { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', script: 'Deva', sttCode: 'hin', locale: 'hi-IN' },
   mr: { code: 'mr', name: 'Marathi', nativeName: 'मराठी', script: 'Deva', sttCode: 'mar', locale: 'mr-IN' },
   en: { code: 'en', name: 'English', nativeName: 'English', script: 'Latn', sttCode: 'eng', locale: 'en-IN' },
+  kn: { code: 'kn', name: 'Kannada', nativeName: 'ಕನ್ನಡ', script: 'Knda', sttCode: 'kan', locale: 'kn-IN' },
 };
 
 export function isLanguage(x: unknown): x is Language {

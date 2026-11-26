@@ -9,6 +9,9 @@ import { getLocality } from '../localities';
 import { LanguageSchema, SkillSchema } from '../schemas';
 import { SKILLS, skillLabel } from '../skills';
 import { ensureMatch, jobsForWorker, MatchError, registerWorker, respondToMatch } from './workflows';
+import { constructionDays12m, eligibilityProfile, saveBenefits } from './benefits';
+import { evaluateAll, questionsToAsk, sortResults } from '../schemes/engine';
+import { nearestHelpCentre } from '../schemes/help-centres';
 
 const skillLoose = z
   .string()
@@ -47,7 +50,22 @@ export const AcceptJobArgs = z.object({
   phone: phone,
 });
 
-export type ToolName = 'register_worker' | 'find_jobs_near_me' | 'accept_job';
+const yesNo = z
+  .union([z.boolean(), z.string()])
+  .transform((v) => (typeof v === 'boolean' ? v : /^(y|yes|true|haan|ha|ho|हाँ|हां|हो|ಹೌದು)/i.test(v.trim()) ? true : /^(n|no|false|nahi|nahin|नहीं|नाही|ಇಲ್ಲ)/i.test(v.trim()) ? false : null))
+  .optional();
+
+/** Scheme Finder. Only call when the caller ASKS about benefits/schemes. Never ask for Aadhaar or bank numbers. */
+export const CheckBenefitsArgs = z.object({
+  phone: phone,
+  age: z.coerce.number().int().min(10).max(100).optional(),
+  has_bank_account: yesNo,
+  pf_deducted: yesNo,
+  pays_income_tax: yesNo,
+  monthly_income_upto_15000: yesNo,
+});
+
+export type ToolName = 'register_worker' | 'find_jobs_near_me' | 'accept_job' | 'check_benefits';
 
 export async function runAgentTool(ctx: Ctx, tool: ToolName, rawArgs: unknown): Promise<Record<string, unknown>> {
   switch (tool) {
@@ -78,6 +96,9 @@ export async function runAgentTool(ctx: Ctx, tool: ToolName, rawArgs: unknown): 
         profile_url: `${ctx.env.PUBLIC_BASE_URL}/w/${res.worker.id}`,
         summary: `${res.worker.name}, ${skillLabel(a.skill)} in ${res.worker.locality}, ₹${res.worker.expectedWage} per day`,
         jobs_nearby_now: nearby.length,
+        ...(ctx.env.FEATURE_SCHEMES
+          ? { benefits_tip: 'At the very end, say ONE line only: I can also check government benefits for you if you want. Do not ask any benefit questions unless they say yes.' }
+          : {}),
       };
     }
     case 'find_jobs_near_me': {
@@ -126,6 +147,37 @@ export async function runAgentTool(ctx: Ctx, tool: ToolName, rawArgs: unknown): 
           starts: job.startDate,
           workers_needed: job.workersNeeded,
         })),
+      };
+    }
+    case 'check_benefits': {
+      if (!ctx.env.FEATURE_SCHEMES) return { ok: false, message: 'Benefit checks are not enabled.' };
+      const a = CheckBenefitsArgs.parse(rawArgs);
+      let worker = await ctx.repo.getWorkerByPhone(a.phone);
+      if (!worker) return { ok: false, message: 'This phone number is not registered yet. Register the caller first.' };
+      const patch: Record<string, unknown> = { optIn: true };
+      if (a.age !== undefined) Object.assign(patch, { age: a.age, ageBand: null });
+      if (a.has_bank_account !== undefined && a.has_bank_account !== null) patch.hasBankAccount = a.has_bank_account;
+      if (a.pf_deducted !== undefined && a.pf_deducted !== null) patch.pfDeducted = a.pf_deducted;
+      if (a.pays_income_tax !== undefined && a.pays_income_tax !== null) patch.paysIncomeTax = a.pays_income_tax;
+      if (a.monthly_income_upto_15000 !== undefined && a.monthly_income_upto_15000 !== null)
+        patch.monthlyIncomeBand = a.monthly_income_upto_15000 ? 'upto_15000' : 'above_15000';
+      worker = await saveBenefits(ctx, worker, patch);
+      const days = await constructionDays12m(ctx, worker.id);
+      const profile = eligibilityProfile(worker, days);
+      const results = sortResults(evaluateAll(profile, 'en'));
+      const next = questionsToAsk(profile)[0] ?? null;
+      const near = nearestHelpCentre(worker.location);
+      return {
+        ok: true,
+        wording_rule: 'Always say the caller MAY be eligible. Never say they ARE eligible. Never ask for Aadhaar or bank account numbers.',
+        next_question_to_ask: next,
+        may_be_eligible: results
+          .filter((r) => r.status === 'likely')
+          .map((r) => ({ scheme: r.scheme.name.en, benefit: r.scheme.oneLineBenefit.en, why: r.reasons.join('; '), official_link: r.scheme.officialUrl })),
+        worth_checking: results.filter((r) => r.status === 'maybe').map((r) => r.scheme.name.en),
+        need_more_info: results.filter((r) => r.status === 'need_info').map((r) => r.scheme.name.en),
+        construction_days_last_12_months: days,
+        nearest_help_centre: near ? `${near.centre.name}, ${near.centre.area} (${near.distanceKm} km, sample location)` : null,
       };
     }
     case 'accept_job': {
