@@ -100,6 +100,33 @@ All of it is defined in one **AWS CDK** stack: [`infra/lib/kaamsetu-stack.ts`](i
 | **Conversational AI agent "Kaam Didi"** | Voice-only registration, job search and acceptance through three **server tools** (`register_worker`, `find_jobs_near_me`, `accept_job`). Provisioned by [`scripts/create-elevenlabs-agent.ts`](scripts/create-elevenlabs-agent.ts) and tested end to end by [`scripts/test-agent.ts`](scripts/test-agent.ts) (ElevenLabs agent simulation against the live webhooks). |
 | **Pre-generated demo audio** | The landing page's phone demo and language showcase, so the pitch never depends on the network. |
 
+## Scheme Finder ("My Benefits"), opt-in
+
+Workers can check which **government welfare schemes they may be eligible for**, by voice and buttons, in Hindi, Marathi, Kannada or English, on Telegram, `/chat` or a Kaam Didi call. They get a documents checklist, the nearest help centre and the official link for each scheme.
+
+**Our angle: construction work days are counted automatically** from jobs completed through KaamSetu (employer taps "Mark job done · confirm worker" on `/hire`). That supports the state construction welfare board's (BOCW) **90-day work requirement**, with a printable work record at `/w/[id]/work-record`.
+
+**Opt-in by design.** After signup the bot adds one line ("I can also tell you which government benefits you may get. Just say 'benefits'…"), once. No questions, popups or nudges until the worker asks ("benefits", "pension", "yojana", "बीमा", "योजना माहिती", "ಯೋಜನೆ", `/benefits`, or the "My benefits" chip on `/chat`). Then it explains what it checks, asks permission, and asks 3-4 questions one at a time, each with a **Skip** button. "Stop" or "baad mein" exits and keeps the answers.
+
+| Scheme | Rule check (engine) | Verified against official page |
+|---|---|---|
+| PM Suraksha Bima (PMSBY) | age 18-70, bank account | ✅ eshram.gov.in/Schemes (2026-11-26) |
+| PM Jeevan Jyoti Bima (PMJJBY) | age 18-50, bank account | ✅ eshram.gov.in/Schemes (cover dates unverified) |
+| PM Shram Yogi Maan-dhan (PM-SYM) | age 18-40, income ≤ ₹15,000/month, no EPFO/ESIC, not a taxpayer | ✅ maandhan.in |
+| Atal Pension Yojana | age 18-40, bank account, not a taxpayer | ⚠️ official page did not load: starting values |
+| e-Shram card | age 16-59, no EPFO/ESIC, not a taxpayer | ⚠️ eligibility text not available: starting values |
+| PM Vishwakarma | age 18+, one of its 18 trades (ours: carpenter, mason) | ✅ pmvishwakarma.gov.in |
+| MahaBOCW (Maharashtra) | construction trade, age 18-60, 90+ days in 12 months | ✅ mahabocw.in (registration/renewal free since 13-08-2025) |
+| Karnataka BOCW | construction trade, age 18-60, 90+ days in 12 months | ⚠️ board site returned an empty page: benefit amounts not stated |
+| Ayushman Bharat PM-JAY | no rule check: "check if your family is covered" | ✅ beneficiary.nha.gov.in |
+
+- **Engine** ([`packages/core/src/schemes/engine.ts`](packages/core/src/schemes/engine.ts)): `likely` / `maybe` / `not_eligible` / `need_info`, plain-language reasons ("You are 34, within 18-40") and the questions still worth asking. Results always say **"you may be eligible"**, never "you are eligible".
+- **Privacy:** only age (or an age band), yes/no answers and an income band are stored. **Never Aadhaar, bank account numbers or documents.** "Delete my data" removes them. The work record and the benefits view open only through a private link the bot sends the worker (HMAC token); public profiles show only the 90-day progress bar.
+- **Opt-in 90-day alert:** when a completed job pushes an opted-in worker past 90 construction days, the bot sends one message with the checklist and the work record. Workers who never asked get no message.
+- **Reminders:** an **EventBridge Scheduler** rule runs a Lambda daily for opted-in workers: PMJJBY/PMSBY renewal (1 June) and BOCW renewal. Each reminder ends with "Reply STOP BENEFITS to turn these off". Reminders use cached audio only.
+- **Help centres** are **sample data** (generic CSC / bank / labour-office entries at locality centroids in Pune and Bengaluru), not verified addresses.
+- Behind `FEATURE_SCHEMES=true` (and `NEXT_PUBLIC_FEATURE_SCHEMES` for the web chip and landing section). 46 Vitest tests cover age boundaries, 89 vs 90 days, PF exclusion, trades, need_info and the opt-in rules, using mocks only.
+
 ## Matching algorithm
 
 ```

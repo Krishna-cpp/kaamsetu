@@ -75,6 +75,16 @@ Worker (Telegram voice note / Kaam Didi call)          Employer (web, voice or f
 - **B2G / CSR partnerships:** state labour departments, skill-development missions and NGOs use KaamSetu as a voice front-end for job linkage, with e-Shram integration.
 - **Unit economics (estimate, list prices):** one onboarding plus one alert is roughly a 15 s STT clip, a few hundred TTS characters and one Nova extraction call. That's on the order of **a few rupees per worker interaction**, recovered by a single hire fee.
 
+## Slide 7b: Scheme Finder, "Work and welfare, by voice"
+- **The gap:** India's welfare schemes (₹20/year accident cover, a ₹3,000/month pension, the construction welfare board's marriage, education and housing help) reach few informal workers. The forms are online, in English, and the BOCW board needs proof of **90 days of construction work** that daily-wage workers rarely have.
+- **What KaamSetu adds:**
+  1. A worker asks "pension ke baare mein batao" and gets 3-4 voice questions.
+  2. They hear which schemes they **may be eligible** for, with documents, the nearest help centre and the official link.
+  3. **Every job completed through KaamSetu is counted.** When an opted-in worker crosses 90 construction days, they get one alert plus a printable work record.
+- **Opt-in by design:** workers are told it exists, and we only ask questions when they want to check.
+- **Privacy:** no Aadhaar, no bank numbers, no documents stored, only age, yes/no answers and an income band. "Delete my data" removes them.
+- **Built on AWS:** EventBridge Scheduler + Lambda for renewal reminders (PMJJBY 1 June, BOCW yearly), DynamoDB for answers, CloudWatch dashboard. The same core powers Telegram, the web chat and the Kaam Didi phone agent.
+
 ## Slide 8: Future scope
 - **WhatsApp Cloud API** channel (same interface as Telegram) and a **missed-call → callback** number via ElevenLabs + Twilio.
 - More languages: Tamil, Telugu, Kannada, Bengali (a config change plus translations).
@@ -116,3 +126,14 @@ ElevenLabs Scribe handles Hindi and Marathi speech, including code-mixed "Hingli
 
 **10. Who owns the data?**
 The worker. Their profile and work history are theirs to share (ID card + QR) or delete at any time. We don't sell data, and matching uses no hidden or paid ranking signals; every score is explained.
+
+### Scheme Finder: 3 more judge questions
+
+**11. How is this different from myScheme or the e-Shram portal?**
+Those are the official catalogues, and we link to them for every scheme. They are text-first websites the worker has to find, read and fill in. KaamSetu brings the check to where the worker already is (a voice note or a phone call), in their language, using what we already know (trade, area). It adds the one thing no portal has: **the construction work days, counted from real completed jobs**, plus a work record for the BOCW 90-day rule.
+
+**12. How do you keep the scheme data accurate?**
+Every scheme carries its official link, a `verification` flag and a `lastVerified` date. We re-checked the official pages on 26 Nov 2026 and corrected what differed: MahaBOCW registration is now free, PMSBY also pays ₹1 lakh for partial disability, and PM Vishwakarma's toolkit is a ₹15,000 grant. Pages that wouldn't load (APY, the e-Shram eligibility text, Karnataka BOCW) are marked unverified, and for Karnataka we deliberately don't quote amounts. We always say "you **may** be eligible", and the final check is the scheme office's.
+
+**13. Isn't asking about age, income and PF a privacy risk?**
+It's opt-in: nothing is asked until the worker asks. We explain first, ask permission, and every question has Skip. We store only age (or an age band), yes/no answers and an income band, never Aadhaar, bank numbers or documents. The benefits view and work record open only through a private link sent to the worker. "Delete my data" removes everything, and "STOP BENEFITS" stops reminders.

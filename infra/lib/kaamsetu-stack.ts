@@ -9,6 +9,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import type { Construct } from 'constructs';
 import path from 'node:path';
 
@@ -84,6 +85,8 @@ export class KaamSetuStack extends cdk.Stack {
         'ELEVENLABS_VOICE_ID_EN',
         'TELEGRAM_BOT_TOKEN',
         'TELEGRAM_WEBHOOK_SECRET',
+        'FEATURE_SCHEMES',
+        'WORK_RECORD_SECRET',
         'AGENT_TOOL_SECRET',
       ]),
     };
@@ -129,6 +132,27 @@ export class KaamSetuStack extends cdk.Stack {
     api.addRoutes({ path: '/agent/{tool}', methods: [apigw.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('Agent', agentFn) });
     // One-off: register the Telegram webhook from AWS (secret-protected)
     const setupFn = new nodejs.NodejsFunction(this, 'TelegramSetup', { ...common, handler: 'telegramSetup', description: 'KaamSetu: register Telegram webhook', timeout: cdk.Duration.seconds(40) });
+    /* ── Scheme Finder reminders: EventBridge Scheduler → Lambda, daily 09:00 IST (03:30 UTC) ── */
+    const remindersFn = new nodejs.NodejsFunction(this, 'BenefitsReminders', {
+      ...common,
+      handler: 'benefitsReminders',
+      description: 'KaamSetu: opt-in scheme renewal reminders (PMJJBY/PMSBY June, BOCW yearly)',
+      timeout: cdk.Duration.minutes(5),
+    });
+    table.grantReadWriteData(remindersFn);
+    bucket.grantRead(remindersFn); // cached TTS only; reminders never generate new audio
+    const schedulerRole = new iam.Role(this, 'RemindersSchedulerRole', { assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com') });
+    remindersFn.grantInvoke(schedulerRole);
+    new scheduler.CfnSchedule(this, 'BenefitsRemindersDaily', {
+      name: 'kaamsetu-benefits-reminders',
+      description: 'Daily opt-in benefit renewal reminders',
+      scheduleExpression: 'cron(30 3 * * ? *)',
+      scheduleExpressionTimezone: 'UTC',
+      flexibleTimeWindow: { mode: 'FLEXIBLE', maximumWindowInMinutes: 30 },
+      state: c.FEATURE_SCHEMES === 'true' ? 'ENABLED' : 'DISABLED',
+      target: { arn: remindersFn.functionArn, roleArn: schedulerRole.roleArn, retryPolicy: { maximumRetryAttempts: 2 } },
+    });
+
     api.addRoutes({ path: '/telegram/setup', methods: [apigw.HttpMethod.POST], integration: new integrations.HttpLambdaIntegration('TgSetup', setupFn) });
 
     /* ── Amplify Hosting (Next.js SSR, monorepo app root apps/web) ── */
@@ -142,7 +166,7 @@ export class KaamSetuStack extends cdk.Stack {
       const webEnv: Record<string, string> = {
         ...runtimeEnv,
         AMPLIFY_MONOREPO_APP_ROOT: 'apps/web',
-        ...pick(c, ['NEXT_PUBLIC_ELEVENLABS_AGENT_ID', 'NEXT_PUBLIC_AWS_LOCATION_API_KEY', 'NEXT_PUBLIC_AWS_LOCATION_REGION', 'NEXT_PUBLIC_TELEGRAM_BOT_URL', 'ELEVENLABS_AGENT_ID']),
+        ...pick(c, ['NEXT_PUBLIC_ELEVENLABS_AGENT_ID', 'NEXT_PUBLIC_AWS_LOCATION_API_KEY', 'NEXT_PUBLIC_AWS_LOCATION_REGION', 'NEXT_PUBLIC_TELEGRAM_BOT_URL', 'ELEVENLABS_AGENT_ID', 'NEXT_PUBLIC_FEATURE_SCHEMES']),
       };
       delete webEnv.NODE_OPTIONS;
       delete webEnv.PUBLIC_BASE_URL; // set on the branch from Amplify's own domain (below)
@@ -197,6 +221,14 @@ export class KaamSetuStack extends cdk.Stack {
 
     /* ── CloudWatch dashboard: what the pitch shows ── */
     const dash = new cloudwatch.Dashboard(this, 'Dashboard', { dashboardName: 'KaamSetu' });
+    dash.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'Scheme Finder reminders (daily): invocations / errors / duration',
+        left: [remindersFn.metricInvocations({ period: cdk.Duration.hours(1) }), remindersFn.metricErrors({ period: cdk.Duration.hours(1) })],
+        right: [remindersFn.metricDuration({ period: cdk.Duration.hours(1) })],
+        width: 24,
+      }),
+    );
     dash.addWidgets(
       new cloudwatch.GraphWidget({ title: 'Telegram webhook: invocations / errors', left: [telegramFn.metricInvocations(), telegramFn.metricErrors()], width: 12 }),
       new cloudwatch.GraphWidget({ title: 'Agent tools: invocations / errors', left: [agentFn.metricInvocations(), agentFn.metricErrors()], width: 12 }),
