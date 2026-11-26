@@ -14,6 +14,18 @@ const EL = 'https://api.elevenlabs.io';
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=');
 
+// load .env first so FEATURE_SCHEMES is known when the prompt is built
+const FEATURE_SCHEMES = getEnv().FEATURE_SCHEMES;
+const SCHEMES_PROMPT = FEATURE_SCHEMES
+  ? `
+
+Government benefits (opt-in, only on request)
+- NEVER bring up benefits or schemes yourself, with ONE exception: after a successful register_worker, say one short line at the very end: "I can also check government benefits for you if you want." Then stop; do not ask any benefit question unless they say yes.
+- Only when the caller asks about benefits, schemes, yojana, pension, insurance/bima, e-Shram, labour card or the welfare board: first say what you will check (insurance, pension, e-Shram card, construction welfare board) and that you need 3-4 quick questions (age, bank account, PF) and NO Aadhaar or bank details. Ask permission. Only if they agree, call check_benefits with their phone and whatever answers you have; then ask ONLY the question in next_question_to_ask, one at a time, and call check_benefits again with the new answer. If they say stop / later / baad mein, stop politely.
+- Read results as "you MAY be eligible for…". Never say "you are eligible". Mention at most 3 benefits, then the nearest help centre (it is a sample location; tell them to confirm timings).
+- Never ask for Aadhaar numbers, bank account numbers or documents.`
+  : '';
+
 const SYSTEM_PROMPT = `You are "Kaam Didi" (काम दीदी), the warm, patient voice of KaamSetu, a free service that helps informal workers in Pune (plumbers, electricians, masons, painters, carpenters, cooks, drivers, helpers, domestic workers…) find daily-wage work near their home. Many callers cannot read or type and may be calling from a basic phone.
 
 Speaking style
@@ -38,16 +50,6 @@ Rules
 - If a tool returns ok:false, explain simply and ask for what's missing.
 - Never invent jobs, wages or phone numbers. Only use tool results.
 - Keep the whole call under 4 minutes. End warmly: "काम मिलेगा, पास में। धन्यवाद!"${SCHEMES_PROMPT}`;
-
-const SCHEMES_PROMPT = process.env.FEATURE_SCHEMES === 'true'
-  ? `
-
-Government benefits (opt-in, only on request)
-- NEVER bring up benefits or schemes yourself, with ONE exception: after a successful register_worker, say one short line at the very end: "I can also check government benefits for you if you want." Then stop; do not ask any benefit question unless they say yes.
-- Only when the caller asks about benefits, schemes, yojana, pension, insurance/bima, e-Shram, labour card or the welfare board: first say what you will check (insurance, pension, e-Shram card, construction welfare board) and that you need 3-4 quick questions (age, bank account, PF) and NO Aadhaar or bank details. Ask permission. Only if they agree, call check_benefits with their phone and whatever answers you have; then ask ONLY the question in next_question_to_ask, one at a time, and call check_benefits again with the new answer. If they say stop / later / baad mein, stop politely.
-- Read results as "you MAY be eligible for…". Never say "you are eligible". Mention at most 3 benefits, then the nearest help centre (it is a sample location; tell them to confirm timings).
-- Never ask for Aadhaar numbers, bank account numbers or documents.`
-  : '';
 
 const FIRST_MESSAGE = 'नमस्ते! मैं काम दीदी हूँ, कामसेतु से। आप काम ढूँढ रहे हैं, या किसी को काम पर रखना है?';
 
@@ -106,7 +108,7 @@ async function main() {
       job_code: { type: 'string', description: '4-digit job code read out from find_jobs_near_me' },
       phone,
     }, ['job_code', 'phone']),
-    ...(process.env.FEATURE_SCHEMES === 'true'
+    ...(FEATURE_SCHEMES
       ? [
           tool(base, env.AGENT_TOOL_SECRET, 'check_benefits', 'ONLY when the caller asks about government benefits/schemes and agreed to a quick check. Saves answers and returns schemes they MAY be eligible for, plus the next question to ask. Never ask for Aadhaar or bank numbers.', {
             phone,
