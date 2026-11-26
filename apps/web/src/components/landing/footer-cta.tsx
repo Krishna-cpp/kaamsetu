@@ -7,7 +7,7 @@ import { TalkToKaamSetu } from '@/components/voice-agent';
 import { gsap, useGsapContext } from './gsap';
 import { Magnetic } from './interactions';
 
-const BOT_URL = process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL || 'https://t.me/';
+const BOT_URL = process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL || 'https://t.me/KaamSetuMeteora2Bot';
 
 export function FooterCta() {
   const root = useRef<HTMLElement>(null);
