@@ -25,6 +25,8 @@ const META: Record<EventType, { icon: LucideIcon; label: string; color: string; 
 
 const istDay = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
+const SCHEMES_ON = process.env.NEXT_PUBLIC_FEATURE_SCHEMES === 'true';
+
 export function LiveApp() {
   const reduce = useReducedMotion();
   const [events, setEvents] = useState<FeedEvent[]>([]);
@@ -148,11 +150,14 @@ export function LiveApp() {
         </div>
 
         {/* counters */}
-        <dl className="grid grid-cols-2 border-b border-line-dark md:grid-cols-4">
+        <dl className={clsx('grid grid-cols-2 border-b border-line-dark', SCHEMES_ON ? 'md:grid-cols-5' : 'md:grid-cols-4')}>
           <Counter label="Workers online" value={stats?.workers} />
           <Counter label="Open jobs" value={stats?.openJobs} />
           <Counter label="Filled jobs" value={stats?.filledJobs} />
           <Counter label="Hires today" value={stats ? matchesToday : undefined} hot />
+          {SCHEMES_ON && (
+            <Counter label="Benefits checks today" value={stats ? (stats.benefitsChecksToday ?? 0) : undefined} className="max-md:col-span-2 max-md:!border-l-0" compact />
+          )}
         </dl>
 
         {/* body */}
@@ -274,7 +279,7 @@ function Clock() {
   );
 }
 
-function Counter({ label, value, hot = false }: { label: string; value: number | undefined; hot?: boolean }) {
+function Counter({ label, value, hot = false, compact = false, className }: { label: string; value: number | undefined; hot?: boolean; compact?: boolean; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const prev = useRef<number | null>(null);
   const reduce = useReducedMotion();
@@ -304,11 +309,12 @@ function Counter({ label, value, hot = false }: { label: string; value: number |
   }, [value, reduce]);
 
   return (
-    <div className="relative border-line-dark px-4 py-4 sm:px-6 [&:not(:first-child)]:border-l max-md:[&:nth-child(3)]:border-l-0 max-md:[&:nth-child(n+3)]:border-t">
+    <div className={clsx('relative border-line-dark px-4 py-4 sm:px-6 [&:not(:first-child)]:border-l max-md:[&:nth-child(3)]:border-l-0 max-md:[&:nth-child(n+3)]:border-t', compact && 'max-md:flex max-md:items-center max-md:justify-between max-md:gap-4 max-md:py-3', className)}>
       <dt className="label text-paper/50">{label}</dt>
       <dd
         className={clsx(
           'mt-2 font-display text-[56px] font-bold leading-[0.85] tabular-nums tracking-[-0.05em] transition-colors duration-500 sm:text-[72px] lg:text-[84px]',
+          compact && 'max-md:mt-0 max-md:text-[40px]',
           flash ? 'text-hivis' : hot ? 'text-signal' : 'text-paper',
         )}
       >

@@ -1,11 +1,26 @@
-import { getCtx, LANGUAGES, skillLabel, toPublicWorker, type PublicWorker, type Rating } from '@kaamsetu/core/server';
-import { ArrowRight, MapPin, Star } from 'lucide-react';
+import {
+  benefitsOf,
+  constructionDays12m,
+  CONSTRUCTION_TRADES,
+  getCtx,
+  isOwner,
+  LANGUAGES,
+  ownerToken,
+  skillLabel,
+  toPublicWorker,
+  type PublicWorker,
+  type Rating,
+  type Worker,
+} from '@kaamsetu/core/server';
+import { ArrowRight, FileText, Lock, MapPin, Star } from 'lucide-react';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import QRCode from 'qrcode';
 import { cache } from 'react';
+import { DaysBar } from '@/components/benefits/days-bar';
+import { MyBenefits } from '@/components/benefits/my-benefits';
 import { KaamDial, VerifiedSeal } from '@/components/profile/kaam-dial';
 import { IntroPlayer, UtilityActions } from '@/components/profile/profile-actions';
 import { tradeColor } from '@/components/ui/trade';
@@ -13,22 +28,27 @@ import { initials, inr } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
-const load = cache(async (id: string): Promise<{ worker: PublicWorker; ratings: Rating[] } | null> => {
+const load = cache(async (id: string): Promise<{ worker: PublicWorker; raw: Worker; ratings: Rating[] } | null> => {
   const ctx = getCtx();
   const w = await ctx.repo.getWorker(id);
   if (!w || w.status === 'deleted') return null;
   const ratings = (await ctx.repo.listRatings(id)).slice(0, 6);
-  return { worker: toPublicWorker(w), ratings };
+  return { worker: toPublicWorker(w), raw: w, ratings };
 });
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
+const tokenOf = (sp: Record<string, string | string[] | undefined>) => (typeof sp.k === 'string' ? sp.k : null);
+
+export async function generateMetadata({ params, searchParams }: Params): Promise<Metadata> {
   const data = await load((await params).id);
   if (!data) return { title: 'Worker not found' };
   const w = data.worker;
   const trade = w.skills[0] ? skillLabel(w.skills[0]) : 'Worker';
+  // the private owner link must never be indexed
+  const priv = !!tokenOf(await searchParams);
   return {
+    ...(priv ? { robots: { index: false, follow: false } } : {}),
     title: `${w.name} · ${trade}`,
     description: `${trade} in ${w.locality}, Pune. KaamScore ${w.kaamScore}/100 · ${w.stats.ratingAvg.toFixed(1)}★ from ${w.stats.jobsCompleted} jobs. Verified on KaamSetu.`,
   };
@@ -38,11 +58,20 @@ const isDeva = (s: string) => /[ऀ-ॿ]/.test(s);
 const idNumber = (id: string) => 'KS-' + id.replace(/^w_/, '').toUpperCase();
 const monthYear = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' });
 
-export default async function WorkerPage({ params }: Params) {
+export default async function WorkerPage({ params, searchParams }: Params) {
   const id = (await params).id;
   const data = await load(id);
   if (!data) notFound();
-  const { worker: w, ratings } = data;
+  const { worker: w, raw, ratings } = data;
+
+  // Scheme Finder (opt-in, behind FEATURE_SCHEMES). Owner = holds the private link the bot sent.
+  const ctx = getCtx();
+  const schemesOn = ctx.env.FEATURE_SCHEMES;
+  const owner = schemesOn && isOwner(ctx, w.id, tokenOf(await searchParams));
+  const construction = schemesOn && w.skills.some((s) => CONSTRUCTION_TRADES.includes(s));
+  const days = construction || owner ? await constructionDays12m(ctx, w.id) : 0;
+  const showBenefits = owner && benefitsOf(raw).optIn;
+  const recordHref = owner ? `/w/${w.id}/work-record?k=${encodeURIComponent(ownerToken(ctx, w.id))}` : null;
 
   const h = await headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
@@ -74,7 +103,10 @@ export default async function WorkerPage({ params }: Params) {
             {/* strap */}
             <header className="hazard relative flex h-12 items-center justify-between border-b-2 border-ink px-3">
               <span className="label bg-ink px-2 py-1 text-paper">KaamSetu</span>
-              <span className="absolute left-1/2 top-1/2 h-3 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink bg-paper" aria-hidden />
+              <span
+                className="absolute left-1/2 top-1/2 h-3 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink bg-paper"
+                aria-hidden
+              />
               <span className="label bg-ink px-2 py-1 text-signal">Worker ID</span>
             </header>
 
@@ -113,10 +145,16 @@ export default async function WorkerPage({ params }: Params) {
                 {[
                   { k: 'Locality', v: w.locality, icon: true },
                   { k: 'Speaks', v: lang.code === 'en' ? 'English' : `${lang.nativeName} · ${lang.name}`, deva: lang.code !== 'en' },
-                  { k: 'Experience', v: w.experienceYears != null ? `${w.experienceYears} yr${w.experienceYears === 1 ? '' : 's'}` : 'New' },
+                  {
+                    k: 'Experience',
+                    v: w.experienceYears != null ? `${w.experienceYears} yr${w.experienceYears === 1 ? '' : 's'}` : 'New',
+                  },
                   { k: 'Asks', v: `${inr(w.expectedWage)}/day` },
                 ].map((f, i) => (
-                  <div key={f.k} className={`border-b border-line py-3 pr-2 ${i % 2 ? 'pl-3' : ''} sm:pl-3 sm:first:pl-0 ${i > 0 ? 'sm:border-l' : ''} ${i % 2 ? 'border-l' : ''}`}>
+                  <div
+                    key={f.k}
+                    className={`border-b border-line py-3 pr-2 ${i % 2 ? 'pl-3' : ''} sm:pl-3 sm:first:pl-0 ${i > 0 ? 'sm:border-l' : ''} ${i % 2 ? 'border-l' : ''}`}
+                  >
                     <dt className="label text-[10px] text-concrete">{f.k}</dt>
                     <dd className="mt-1 flex items-center gap-1 text-[15px] font-medium leading-tight">
                       {f.icon && <MapPin className="size-3.5 shrink-0 text-hivis-deep" aria-hidden />}
@@ -138,7 +176,9 @@ export default async function WorkerPage({ params }: Params) {
                       {w.stats.ratingCount ? w.stats.ratingAvg.toFixed(1) : '—'}
                       <Star className="size-5 fill-hivis text-ink" strokeWidth={1.5} aria-label="stars" />
                     </dd>
-                    <dd className="font-mono text-[11px] text-concrete-dark">{w.stats.ratingCount} review{w.stats.ratingCount === 1 ? '' : 's'}</dd>
+                    <dd className="font-mono text-[11px] text-concrete-dark">
+                      {w.stats.ratingCount} review{w.stats.ratingCount === 1 ? '' : 's'}
+                    </dd>
                   </div>
                   <div className="bg-[#FBF8F1] p-2.5 sm:p-3">
                     <dt className="label text-[10px] text-concrete">Jobs done</dt>
@@ -164,7 +204,12 @@ export default async function WorkerPage({ params }: Params) {
 
             {/* footer: QR + id */}
             <footer className="flex items-center gap-4 border-t-2 border-dashed border-ink p-5 sm:p-7">
-              <div className="size-[92px] shrink-0 bg-[#FBF8F1] p-1 [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: qr }} role="img" aria-label="QR code linking to this profile" />
+              <div
+                className="size-[92px] shrink-0 bg-[#FBF8F1] p-1 [&_svg]:h-full [&_svg]:w-full"
+                dangerouslySetInnerHTML={{ __html: qr }}
+                role="img"
+                aria-label="QR code linking to this profile"
+              />
               <div className="min-w-0 flex-1">
                 <p className="label text-concrete">Scan to verify</p>
                 <p className="mt-1 font-display text-2xl font-bold tracking-tight">{idNumber(w.id)}</p>
@@ -178,12 +223,20 @@ export default async function WorkerPage({ params }: Params) {
 
         {/* ── side ── */}
         <div className="space-y-10 lg:pt-12">
+          {owner && (
+            <p className="label no-print flex items-center gap-2 border border-ink bg-signal px-3 py-2 text-ink">
+              <Lock className="size-3.5 shrink-0" aria-hidden /> Your private view · don&rsquo;t share this link
+            </p>
+          )}
           {w.introTranscript && (
             <figure>
               <figcaption className="label flex items-center gap-2 text-concrete">
                 <span className="inline-block size-1.5 bg-hivis" aria-hidden /> In {first}&rsquo;s own words · {lang.name}
               </figcaption>
-              <blockquote className={`mt-4 text-[26px] leading-[1.25] sm:text-[32px] ${isDeva(w.introTranscript) ? 'deva font-medium tracking-tight' : 'serif-i'}`} lang={w.language}>
+              <blockquote
+                className={`mt-4 text-[26px] leading-[1.25] sm:text-[32px] ${isDeva(w.introTranscript) ? 'deva font-medium tracking-tight' : 'serif-i'}`}
+                lang={w.language}
+              >
                 &ldquo;{w.introTranscript}&rdquo;
               </blockquote>
               {w.introAudioUrl && (
@@ -216,6 +269,36 @@ export default async function WorkerPage({ params }: Params) {
             </p>
           </div>
 
+          {construction && (
+            <section aria-labelledby="days-h">
+              <h2 id="days-h" className="label flex items-center justify-between border-b border-ink pb-2">
+                Construction days <span className="text-concrete">Last 12 months</span>
+              </h2>
+              <DaysBar days={days} className="mt-4" />
+              <p className="mt-2 text-xs leading-relaxed text-concrete-dark">
+                Counted from jobs completed through KaamSetu. Welfare boards ask for 90 days of building work in a year.
+              </p>
+              {recordHref ? (
+                <Link
+                  href={recordHref}
+                  className="no-print group mt-4 flex h-12 items-center justify-between border-2 border-ink bg-paper px-4 transition-colors hover:bg-ink hover:text-paper"
+                >
+                  <span className="flex items-center gap-2 font-display text-[17px] font-semibold tracking-tight">
+                    <FileText className="size-4" aria-hidden /> Open my work record
+                  </span>
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" aria-hidden />
+                </Link>
+              ) : (
+                <p className="mt-4 flex items-start gap-2 border border-dashed border-concrete px-3 py-2.5 text-[13px] leading-snug text-concrete-dark">
+                  <Lock className="mt-px size-3.5 shrink-0" aria-hidden />
+                  Private: the worker opens their work record from the KaamSetu bot.
+                </p>
+              )}
+            </section>
+          )}
+
+          {showBenefits && <MyBenefits worker={raw} days={days} />}
+
           <section aria-labelledby="reviews-h">
             <h2 id="reviews-h" className="label flex items-center justify-between border-b border-ink pb-2">
               Recent reviews <span className="text-concrete">{w.stats.ratingCount}</span>
@@ -232,7 +315,10 @@ export default async function WorkerPage({ params }: Params) {
                       ))}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className={`text-[15px] leading-snug ${r.comment ? '' : 'text-concrete'}`} lang={r.comment && isDeva(r.comment) ? 'hi' : undefined}>
+                      <p
+                        className={`text-[15px] leading-snug ${r.comment ? '' : 'text-concrete'}`}
+                        lang={r.comment && isDeva(r.comment) ? 'hi' : undefined}
+                      >
                         {r.comment ?? 'Rated without a comment'}
                       </p>
                       <p className="label mt-1 text-[10px] text-concrete">{monthYear(r.createdAt)} · verified job</p>

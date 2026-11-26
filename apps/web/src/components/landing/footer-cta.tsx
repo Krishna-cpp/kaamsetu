@@ -37,7 +37,7 @@ export function FooterCta() {
       <div className="container-x pt-20 md:pt-28">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12">
           <div className="md:col-span-7">
-            <p className="label text-concrete">§ 06 · Start</p>
+            <p className="label text-concrete">§ {process.env.NEXT_PUBLIC_FEATURE_SCHEMES === 'true' ? '07' : '06'} · Start</p>
             <h2 id="cta-title" className="display mt-4 text-[clamp(48px,7vw,120px)]">
               Say it. <span className="serif-i text-hivis">Get work.</span>
             </h2>

@@ -25,6 +25,7 @@ interface Props {
   onSelect: (id: string) => void;
   onRespond: (matchId: string, action: 'accepted' | 'declined') => Promise<void>;
   onRated: (w: PublicWorker) => void;
+  onComplete?: (matchId: string) => Promise<void>;
   workerCount: number;
   /** rendered inside the mobile bottom sheet: sticky to the sheet, tighter header */
   inSheet?: boolean;
@@ -37,7 +38,7 @@ export function MatchList(p: Props) {
   return <Loaded {...p} view={p.view} />;
 }
 
-function Loaded({ inSheet = false, view, activeId, selectedId, celebrate, workerOverrides, onHover, onSelect, onRespond, onRated, error, onRetry }: Props & { view: JobView }) {
+function Loaded({ inSheet = false, view, activeId, selectedId, celebrate, workerOverrides, onHover, onSelect, onRespond, onRated, onComplete, error, onRetry }: Props & { view: JobView }) {
   const reduce = useReducedMotion();
   const [showMore, setShowMore] = useState(false);
   const { job, matches, counts } = view;
@@ -147,6 +148,7 @@ function Loaded({ inSheet = false, view, activeId, selectedId, celebrate, worker
                   onSelect={onSelect}
                   onRespond={onRespond}
                   onRated={onRated}
+                  onComplete={onComplete}
                 />
               </motion.li>
             ))}
@@ -185,6 +187,7 @@ function Loaded({ inSheet = false, view, activeId, selectedId, celebrate, worker
                         onSelect={onSelect}
                         onRespond={onRespond}
                         onRated={onRated}
+                        onComplete={onComplete}
                       />
                     </li>
                   ))}

@@ -2,6 +2,9 @@ import { ArrowUpRight, BadgeCheck, EyeOff, MapPin, Mic, PhoneOff, Trash2 } from 
 import Link from 'next/link';
 import { SpotCard } from './interactions';
 
+// the Scheme Finder section (§ 05) shifts the numbering when it is on
+const SCHEMES_ON = process.env.NEXT_PUBLIC_FEATURE_SCHEMES === 'true';
+
 const AWS = [
   { k: 'Bedrock · Nova', v: 'Pulls name, trade, area and wage out of free speech' },
   { k: 'Lambda', v: 'Runs the bot, matching and alert fan-out' },
@@ -53,7 +56,7 @@ export function TechTrust() {
     <section aria-labelledby="stack-title" className="relative border-t border-ink bg-paper">
       <div className="container-x py-20 md:py-28">
         <div className="grid grid-cols-1 gap-4 border-b border-ink pb-5 md:grid-cols-12">
-          <p className="label md:col-span-3">§ 05 · Stack &amp; trust</p>
+          <p className="label md:col-span-3">§ {SCHEMES_ON ? '06' : '05'} · Stack &amp; trust</p>
           <h2 id="stack-title" className="display text-[clamp(36px,4.6vw,72px)] md:col-span-9">
             Serious plumbing, <span className="serif-i text-hivis">for plumbers.</span>
           </h2>

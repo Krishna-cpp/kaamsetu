@@ -1,5 +1,5 @@
 /** Typed client for the KaamSetu web API (used by client components). */
-import type { FeedEvent, Job, JobDraftInput, Language, PublicWorker, Rating, LatLng } from '@kaamsetu/core';
+import type { FeedEvent, Job, JobDraftInput, Language, PublicWorker, Rating, LatLng, Match as MatchRecord } from '@kaamsetu/core';
 import type { JobView, ParsedJob } from '@kaamsetu/core/server';
 
 export type { JobView, ParsedJob, MatchView } from '@kaamsetu/core/server';
@@ -36,6 +36,15 @@ export interface FeedResponse {
   now: string;
 }
 
+export interface CompleteResult {
+  match: MatchRecord;
+  jobStatus: string;
+  /** worker's construction days in the last 12 months, after this job */
+  constructionDays12m: number;
+  /** true when the opt-in 90-day benefits alert was sent to the worker */
+  alerted: boolean;
+}
+
 export const api = {
   transcribe(audio: Blob, kind: 'job' | 'worker' = 'job', lang?: Language): Promise<Transcript> {
     const fd = new FormData();
@@ -68,6 +77,14 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action }),
     }).then((r) => json<{ jobStatus: string }>(r));
+  },
+  /** Employer: mark an accepted job done and confirm the worker did it (counts toward the work record). */
+  complete(matchId: string): Promise<CompleteResult> {
+    return fetch(`/api/matches/${encodeURIComponent(matchId)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'completed' }),
+    }).then((r) => json<CompleteResult>(r));
   },
   workers(): Promise<PublicWorkerWithPin[]> {
     return fetch('/api/workers', { cache: 'no-store' }).then((r) => json<PublicWorkerWithPin[]>(r));

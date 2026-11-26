@@ -767,3 +767,77 @@ select.ks-field {
   }
 }
 /* ── /hero map layering ── */
+
+/* ── work-record ── */
+/* /w/[id]/work-record: "Download PDF" = window.print(). Clean A4, black on white, no chrome. */
+.ks-record {
+  page: work-record;
+}
+@page work-record {
+  size: A4;
+  margin: 14mm 14mm 16mm;
+}
+@media print {
+  body:has(.ks-record) {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  /* site nav, skip link, grain, dev pill: everything outside the record */
+  body:has(.ks-record) > *:not(:has(.ks-record)):not(.ks-record),
+  body:has(.ks-record) .fixed {
+    display: none !important;
+  }
+  .ks-record {
+    min-height: 0 !important;
+    padding-top: 0 !important;
+    font-size: 11pt;
+  }
+  .ks-record,
+  .ks-record * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .ks-record .container-x {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .ks-record .display {
+    font-size: 30pt !important;
+  }
+  .ks-record-note {
+    border: 1.5pt solid #000 !important;
+  }
+  .ks-record-total .display {
+    font-size: 36pt !important;
+  }
+  .ks-record [class*='border'] {
+    border-color: #000 !important;
+  }
+  .ks-record-table tbody tr {
+    break-inside: avoid;
+    border-bottom: 0.5pt solid #999 !important;
+  }
+  .ks-record-table thead {
+    display: table-header-group;
+  }
+  .ks-record a {
+    text-decoration: none;
+  }
+  /* tighter rhythm so a typical record fits one A4 page */
+  .ks-record-table th,
+  .ks-record-table td {
+    padding-top: 4pt !important;
+    padding-bottom: 4pt !important;
+  }
+  .ks-record .mt-8,
+  .ks-record .mt-10 {
+    margin-top: 14pt !important;
+  }
+  .ks-record .py-8 {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+}

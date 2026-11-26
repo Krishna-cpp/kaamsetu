@@ -2,7 +2,7 @@
 
 import clsx from 'clsx';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { BadgeCheck, ExternalLink, MoreHorizontal, Phone, Star } from 'lucide-react';
+import { BadgeCheck, Check, ClipboardCheck, ExternalLink, LoaderCircle, MoreHorizontal, Phone, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { skillLabel, type PublicWorker, type Skill } from '@kaamsetu/core';
@@ -25,9 +25,13 @@ interface Props {
   onSelect: (id: string) => void;
   onRespond: (matchId: string, action: 'accepted' | 'declined') => Promise<void>;
   onRated: (w: PublicWorker) => void;
+  /** employer: mark an accepted job done + confirm the worker (feeds the Scheme Finder work record) */
+  onComplete?: (matchId: string) => Promise<void>;
 }
 
-export function MatchCard({ match: m, jobSkill, jobId, active, selected = false, celebrate, worker: w, onHover, onSelect, onRespond, onRated }: Props) {
+const SCHEMES_ON = process.env.NEXT_PUBLIC_FEATURE_SCHEMES === 'true';
+
+export function MatchCard({ match: m, jobSkill, jobId, active, selected = false, celebrate, worker: w, onHover, onSelect, onRespond, onRated, onComplete }: Props) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const [menu, setMenu] = useState(false);
@@ -37,6 +41,8 @@ export function MatchCard({ match: m, jobSkill, jobId, active, selected = false,
   const tc = tradeColor(skill);
   const accepted = m.status === 'accepted';
   const declined = m.status === 'declined';
+  const done = SCHEMES_ON && accepted && !!m.completedAt;
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     if (selected) ref.current?.scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
@@ -143,10 +149,17 @@ export function MatchCard({ match: m, jobSkill, jobId, active, selected = false,
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-line px-3.5 py-2">
-        <StatusChip status={m.status} />
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <StatusChip status={m.status} />
+          {done && (
+            <span className="label inline-flex h-6 items-center gap-1 whitespace-nowrap bg-ink px-2 text-signal">
+              <Check className="size-3" strokeWidth={3} aria-hidden /> Done{m.employerConfirmed ? ' · confirmed' : ''}
+            </span>
+          )}
+        </span>
         <div className="relative flex items-center gap-1">
           {accepted && !rated && (
-            <button type="button" onClick={() => setRating((r) => !r)} className="label px-2 py-1.5 hover:text-hivis" aria-expanded={rating}>
+            <button type="button" onClick={() => setRating((r) => !r)} className="label whitespace-nowrap px-2 py-1.5 hover:text-hivis" aria-expanded={rating}>
               Rate work
             </button>
           )}
@@ -216,6 +229,29 @@ export function MatchCard({ match: m, jobSkill, jobId, active, selected = false,
                 </a>
               )}
             </div>
+            {SCHEMES_ON && onComplete && !m.completedAt && (
+              <button
+                type="button"
+                disabled={completing}
+                onClick={async () => {
+                  setCompleting(true);
+                  try {
+                    await onComplete(m.id);
+                  } finally {
+                    setCompleting(false);
+                  }
+                }}
+                className="group flex min-h-11 w-full items-center justify-between gap-2 border-t border-ink bg-signal px-3.5 py-2 text-left text-ink transition-colors hover:bg-hivis disabled:cursor-wait disabled:opacity-70"
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  {completing ? <LoaderCircle className="size-4 shrink-0 animate-spin" aria-hidden /> : <ClipboardCheck className="size-4 shrink-0" aria-hidden />}
+                  <span className="whitespace-nowrap font-display text-[15px] font-bold tracking-tight">
+                    Mark job done <span className="font-sans text-[13px] font-medium text-ink/75">· confirm worker</span>
+                  </span>
+                </span>
+                <span className="label shrink-0 text-[10px] text-ink/75 max-[400px]:hidden">Work record</span>
+              </button>
+            )}
           </motion.div>
         )}
         {accepted && rating && (

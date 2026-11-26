@@ -217,6 +217,26 @@ function HireInner() {
     [toast],
   );
 
+  // employer: job done + "this worker did it" (work-record tick); may fire the worker's opt-in 90-day alert
+  const complete = useCallback(
+    async (matchId: string) => {
+      try {
+        const r = await api.complete(matchId);
+        const d = r.constructionDays12m;
+        toast.push({
+          tone: 'success',
+          title: 'Job marked done · work record updated',
+          body: r.alerted ? 'Worker opted in to benefits: 90-day alert sent' : `${d} construction day${d === 1 ? '' : 's'} in the last 12 months`,
+          ms: 6000,
+        });
+        setNonce((n) => n + 1);
+      } catch (e) {
+        toast.push({ tone: 'error', title: 'Could not mark done', body: e instanceof Error ? e.message : undefined });
+      }
+    },
+    [toast],
+  );
+
   /* ── map data ── */
   const jobPin: JobPin | null = view
     ? {
@@ -260,6 +280,7 @@ function HireInner() {
       onHover={setHoverId}
       onSelect={(id) => setSelectedId((s) => (s === id ? null : id))}
       onRespond={respond}
+      onComplete={complete}
       onRated={(w) => setOverrides((o) => ({ ...o, [w.id]: w }))}
       workerCount={allWorkers.length}
       inSheet={inSheet}

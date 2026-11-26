@@ -4,6 +4,7 @@ import { FooterCta } from '@/components/landing/footer-cta';
 import { Hero } from '@/components/landing/hero';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { TradeMarquee } from '@/components/landing/marquee';
+import { Welfare } from '@/components/landing/welfare';
 import { Problem } from '@/components/landing/problem';
 import { SmoothScroll } from '@/components/landing/smooth-scroll';
 
@@ -25,6 +26,7 @@ export default function Home() {
       <HowItWorks />
       <VoiceDemo />
       <LanguageShowcase />
+      <Welfare />
       <TechTrust />
       <FooterCta />
     </div>

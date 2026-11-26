@@ -14,7 +14,10 @@ export default function WorkerNotFound() {
             The link may be mistyped, or the worker removed their profile. Workers can delete their data at any time.
           </p>
           <div className="mt-6 flex gap-2">
-            <Link href="/hire" className="label inline-flex h-11 flex-1 items-center justify-center bg-ink text-paper hover:bg-hivis hover:text-ink">
+            <Link
+              href="/hire"
+              className="label inline-flex h-11 flex-1 items-center justify-center bg-ink text-paper hover:bg-hivis hover:text-ink"
+            >
               Find workers
             </Link>
             <Link href="/" className="label inline-flex h-11 flex-1 items-center justify-center border border-ink hover:bg-paper-2">

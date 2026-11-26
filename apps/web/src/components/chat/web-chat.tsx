@@ -5,9 +5,12 @@
  * delivered through the WebChannel. Demo fallback when Telegram is unavailable.
  */
 import clsx from 'clsx';
-import { Mic, Pause, Play, RotateCcw, Send, Square } from 'lucide-react';
+import { ArrowUpRight, HeartHandshake, MapPin, Mic, Pause, Play, RotateCcw, Send, Square } from 'lucide-react';
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { MiniMap, mapsHref } from '@/components/benefits/mini-map';
 import { useRecorder } from '@/components/hire/use-recorder';
+
+const SCHEMES_ON = process.env.NEXT_PUBLIC_FEATURE_SCHEMES === 'true';
 
 interface Button {
   text: string;
@@ -17,11 +20,13 @@ interface Button {
 interface Msg {
   id: number;
   from: 'bot' | 'user';
-  kind: 'text' | 'voice';
+  kind: 'text' | 'voice' | 'location';
   text: string;
   audioUrl: string | null;
   duration: number | null;
   buttons: Button[][] | null;
+  /** kind=location: a place to show on a mini map */
+  location?: { lat: number; lng: number; title: string; address: string } | null;
   at: string;
 }
 
@@ -31,6 +36,29 @@ function newChatId(): string {
   const a = 'abcdefghijklmnopqrstuvwxyz0123456789';
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return 'web_' + Array.from(bytes, (b) => a[b % a.length]).join('');
+}
+
+/** https:// URLs in bot text become tappable links (http and other schemes stay plain text). */
+function Linkified({ text }: { text: string }) {
+  const parts = text.split(/(https:\/\/[^\s<>"']+)/g);
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (i % 2 === 0) return p ? <Fragment key={i}>{p}</Fragment> : null;
+        // keep trailing punctuation out of the link
+        const m = /^(.*?)([).,;:!?]*)$/.exec(p);
+        const href = m?.[1] ?? p;
+        return (
+          <Fragment key={i}>
+            <a href={href} target="_blank" rel="noopener noreferrer" className="break-all font-medium text-ink underline decoration-hivis decoration-2 underline-offset-2 hover:bg-signal">
+              {href.replace(/^https:\/\//, '').replace(/\/$/, '')}
+            </a>
+            {m?.[2]}
+          </Fragment>
+        );
+      })}
+    </>
+  );
 }
 
 /** Renders the Telegram HTML subset the bot uses (<b>, <i>, entities) without dangerouslySetInnerHTML. */
@@ -51,7 +79,7 @@ function RichText({ text }: { text: string }) {
           {lines.map((l, j) => (
             <Fragment key={j}>
               {j > 0 && <br />}
-              {l}
+              <Linkified text={l} />
             </Fragment>
           ))}
         </span>,
@@ -254,13 +282,15 @@ export function WebChat() {
             <li key={m.id} className={clsx('flex flex-col', mine ? 'items-end' : 'items-start')}>
               <div
                 className={clsx(
-                  'max-w-[86%] px-3.5 py-2.5 text-[15px] leading-snug shadow-[0_1px_0_rgb(0_0_0/0.06)]',
+                  'min-w-0 max-w-[86%] text-[15px] leading-snug shadow-[0_1px_0_rgb(0_0_0/0.06)]',
+                  m.kind === 'location' && m.location ? 'w-[280px] p-0' : 'px-3.5 py-2.5',
                   mine ? 'bg-ink text-paper' : 'border border-line bg-paper text-ink',
                 )}
               >
                 {m.kind === 'voice' && <VoiceNote src={m.audioUrl} mine={mine} duration={m.duration} />}
-                {m.text && (
-                  <p lang={/[ऀ-ॿ]/.test(m.text) ? 'hi' : undefined} className={clsx('deva break-words', m.kind === 'voice' && 'mt-2')}>
+                {m.kind === 'location' && m.location && <LocationCard place={m.location} />}
+                {m.text && m.kind !== 'location' && (
+                  <p lang={/[ऀ-ॿ]/.test(m.text) ? 'hi' : undefined} className={clsx('deva break-words [overflow-wrap:anywhere]', m.kind === 'voice' && 'mt-2')}>
                     <RichText text={m.text} />
                   </p>
                 )}
@@ -309,9 +339,24 @@ export function WebChat() {
         <p className="shrink-0 border-t border-line bg-signal px-4 py-2 text-sm">Microphone blocked. Allow it in the browser, or type below.</p>
       )}
 
+      {/* opt-in benefits shortcut: just sends the words, the bot does the rest */}
+      {SCHEMES_ON && rec.state !== 'recording' && (
+        <div className="flex shrink-0 items-center gap-2 border-t border-line bg-paper px-3 pt-2.5">
+          <button
+            type="button"
+            disabled={busy || !chatId}
+            onClick={() => void post({ text: 'My benefits', lang })}
+            className="label inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border border-ink bg-paper px-2.5 text-ink transition-colors hover:bg-ink hover:text-paper disabled:opacity-50"
+          >
+            <HeartHandshake className="size-3.5" aria-hidden /> My benefits
+          </button>
+          <span className="label min-w-0 truncate text-[10px] text-concrete">Gov. schemes · only if you ask</span>
+        </div>
+      )}
+
       {/* composer */}
       <form
-        className="flex shrink-0 items-center gap-2 border-t border-line bg-paper p-3"
+        className={clsx('flex shrink-0 items-center gap-2 bg-paper p-3', !(SCHEMES_ON && rec.state !== 'recording') && 'border-t border-line')}
         onSubmit={(e) => {
           e.preventDefault();
           void sendText();
@@ -346,6 +391,33 @@ export function WebChat() {
           </button>
         )}
       </form>
+    </div>
+  );
+}
+
+/** kind=location: compact mini-map card (help centres are sample data, so say so). */
+function LocationCard({ place }: { place: { lat: number; lng: number; title: string; address: string } }) {
+  return (
+    <div className="overflow-hidden">
+      <MiniMap lat={place.lat} lng={place.lng} label={`${place.title}, ${place.address}`} className="h-[120px] border-0 border-b border-b-line" spanDeg={0.03} caption={place.address.split(",")[0]} />
+      <div className="px-3.5 py-2.5">
+        <p className="flex items-start gap-1.5 font-semibold leading-tight">
+          <MapPin className="mt-0.5 size-4 shrink-0 text-hivis-deep" aria-hidden />
+          <span className="min-w-0 break-words">{place.title}</span>
+        </p>
+        <p className="mt-1 break-words text-[13px] text-concrete-dark">{place.address}</p>
+        <div className="mt-2.5 flex items-center justify-between gap-2">
+          <span className="label text-[10px] text-concrete">Sample location</span>
+          <a
+            href={mapsHref(place.lat, place.lng)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="label inline-flex h-8 items-center gap-1 bg-ink px-2.5 text-paper hover:bg-hivis hover:text-ink"
+          >
+            Open in Maps <ArrowUpRight className="size-3.5" aria-hidden />
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
