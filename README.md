@@ -33,7 +33,7 @@ Small employers (a shop owner needing a helper for 3 days, a family needing a pl
 | 🧭 **Explainable matching** | Every match carries a score (0–100) and a one-line reason: *"Plumber · 1.3 km away · asks ₹800 (you offer ₹850) · 4.8★ from 12 jobs"*. |
 | 🔔 **Voice job alerts** | Top matches get a Telegram **voice alert** in their language with **Accept / Not interested / Call**. Contacts unlock only after a mutual accept. |
 | ☎️ **Kaam Didi** | An **ElevenLabs Conversational AI** agent: workers who can't read or type can register, hear nearby jobs and accept one, entirely by voice. |
-| 🪪 **KaamScore** | Ratings build a portable trust score and verified skill badges on a shareable **digital ID card** (`/w/[id]`). |
+| 🪪 **Kaam Score** | Ratings build a portable trust score and verified skill badges on a shareable **digital ID card** (`/w/[id]`). |
 
 <table>
 <tr>
